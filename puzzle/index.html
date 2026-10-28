@@ -37,7 +37,7 @@ async function tap(e){if(busy||$('ov').classList.contains('on'))return;ac();cons
   hintAt=null;await sleep(60);let k=0,prev=[];
   for(let n=0;n<100;n++){const before=g.map(r=>r.slice());const s=D.step(g);const src=new Set(s.moves.map(m=>m.x+','+m.y));
    for(const[px,py]of prev)if(!src.has(px+','+py))land(px,py,before[py][px]);
-   if(!s.moved)break;const roll=s.moves.some(m=>m.dx);const dur=roll?200:Math.max(55,130*Math.pow(.78,k));k=roll?0:k+1;
+   if(!s.moved)break;const roll=s.moves.some(m=>m.dx);const dur=roll?280:Math.max(77,182*Math.pow(.78,k));k=roll?0:k+1;
    anims=s.moves.map(m=>{const c=before[m.y][m.x],cart=m.to==='cart';const tx=cart?m.x:m.x+(m.dx||0),ty=cart?H+.3:m.dx?m.y:m.y+1;const r0=rot[m.y+','+m.x]||0;delete rot[m.y+','+m.x];if(!cart)rot[ty+','+tx]=r0+(m.dx||0)*Math.PI/2;return{c,fx:m.x,fy:m.y,tx,ty,kind:cart?'cart':m.dx?'roll':'fall',r0,dx:m.dx||0}});
    animT0=performance.now();animDur=dur;await sleep(dur);
    for(const a of anims){if(a.kind==='cart'){SFX.coin();cartJ[a.fx]=performance.now();floater(a.fx,H-.2,'+ Gold!');burst(a.fx,H,'#ffd34d',12,5)}}
