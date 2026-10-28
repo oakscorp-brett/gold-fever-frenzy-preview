@@ -1,0 +1,123 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Gold Fever Frenzy · Try 3 new feels</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;background:#1c120a;color:#f4e6c8;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+#app{display:flex;flex-direction:column;height:100%;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.tabs{display:flex;gap:6px;padding:8px;background:linear-gradient(#3b2614,#2a1a0e);border-bottom:2px solid #5a3a1c}
+.tab{flex:1;border:0;border-radius:14px;padding:8px 2px;font-weight:900;font-size:13px;line-height:1.15;background:#5a3a1c;color:#ffd34d;box-shadow:0 3px 0 #2a1a0e}.tab b{display:block;font-size:22px}.tab.on{background:linear-gradient(#ffcf4a,#e6a412);color:#3a2205;box-shadow:0 3px 0 #9a6a08}
+.how{text-align:center;font-size:15px;padding:8px 10px 2px;min-height:40px}
+.hud{display:flex;gap:8px;justify-content:center;padding:6px}.pill{background:#2a1a0e;border:2px solid #5a3a1c;border-radius:12px;padding:4px 12px;text-align:center;min-width:84px}.pill b{display:block;font-size:22px;color:#ffd34d}.pill small{font-size:10px;opacity:.8;letter-spacing:.05em}
+#meterW{display:none;margin:2px 16px 4px;height:26px;border-radius:13px;background:#2a1a0e;border:2px solid #5a3a1c;position:relative;overflow:hidden}#meter{height:100%;width:0;background:linear-gradient(90deg,#5c3,#fc3,#f63,#d22);transition:width .3s}#meterT{position:absolute;inset:0;text-align:center;font:900 14px/22px sans-serif;color:#fff;text-shadow:0 1px 2px #000}
+#wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:4px;position:relative}canvas{touch-action:none;border-radius:12px;box-shadow:0 0 0 3px #5a3a1c}
+.bot{display:flex;justify-content:center;gap:10px;padding:8px}.btn{border:0;border-radius:14px;font-weight:900;padding:12px 18px;font-size:17px;background:linear-gradient(#ffcf4a,#e6a412);color:#3a2205;box-shadow:0 3px 0 #9a6a08}.btn.s{background:#5a3a1c;color:#ffd34d;box-shadow:0 3px 0 #2a1a0e}.btn.cash{background:linear-gradient(#7be05a,#3a9a22);color:#0d2a05;font-size:20px;padding:14px 26px;box-shadow:0 3px 0 #1f5a10}
+#call{position:fixed;left:0;right:0;top:42%;text-align:center;font:900 34px sans-serif;padding:0 8px;color:#ffd34d;-webkit-text-stroke:2px #3a2205;pointer-events:none;opacity:0;z-index:5}#call.go{animation:cg 1s ease-out}
+@keyframes cg{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.15)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+#ov{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}#ov.on{display:flex}
+.card{background:linear-gradient(#4a2f17,#2a1a0e);border:3px solid #ffd34d;border-radius:22px;padding:22px;max-width:340px;text-align:center}.card .ic{font-size:60px}.card p{font-size:18px;line-height:1.4}
+</style></head><body><div id="app">
+<div class="tabs"><button class="tab" data-m="0"><b>1</b>Cascade Dig</button><button class="tab" data-m="1"><b>2</b>Aim the Dynamite</button><button class="tab" data-m="2"><b>3</b>Push Your Luck</button></div>
+<div class="how" id="how"></div>
+<div class="hud"><div class="pill"><b id="h1">0</b><small id="h1l">DIGS</small></div><div class="pill"><b id="h2">0</b><small id="h2l">GOLD</small></div><div class="pill"><b id="h3">0</b><small>TARGET</small></div></div>
+<div id="meterW"><div id="meter"></div><div id="meterT">Cave-in risk 0%</div></div>
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div class="bot" id="bot"></div>
+</div><div id="call"></div><div id="ov"><div class="card" id="card"></div></div>
+<script>
+const $=id=>document.getElementById(id),W=7,H=9;const cv=$('cv'),cx=cv.getContext('2d');let cs=40,B=[],mode=0,G={},parts=[],floaters=[],shake=0,busy=false,ghost=null;
+const VAL=[0,1,3,8,20];const COL={D:['#8a5a2b','#6e4520'],C:['#b5653a','#8c4a28'],K:['#5a6a4a','#3e4a32'],G:['#8b8b86','#6a6a64']};const DIRT=['D','C','K','G'];
+const rnd=n=>Math.floor(Math.random()*n),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// ---- sound (same synth style as the game) ----
+let AC=null;function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){}return AC}
+function tone(f,d=.12,type='square',v=.07,sl=0,dl=0){const a=ac();if(!a)return;try{const t=a.currentTime+dl,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
+function noise(d=.25,v=.2,lp=700){const a=ac();if(!a)return;try{const t=a.currentTime,b=a.createBuffer(1,a.sampleRate*d,a.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=(Math.random()*2-1)*(1-i/x.length);const s=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=lp;s.buffer=b;g.gain.value=v;s.connect(f);f.connect(g);g.connect(a.destination);s.start(t)}catch(e){}}
+const SFX={dig:()=>{noise(.15,.15);tone(140,.1,'triangle',.1,-60)},coin:n=>{tone(880+n*60,.08,'square',.06,300);tone(1320+n*80,.1,'square',.05,0,.07)},pop:n=>{for(let i=0;i<3;i++)tone(660*Math.pow(1.26,i+n),.12,'square',.06,0,i*.06)},boom:()=>{noise(.6,.5,500);tone(70,.5,'sawtooth',.12,-40)},crack:()=>{noise(.5,.5,1200);tone(90,.6,'sawtooth',.14,-60)},bank:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,.15,'square',.06,0,i*.08))},creak:()=>tone(90+Math.random()*40,.25,'sawtooth',.05,-20)};
+function hap(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
+function call(t){const c=$('call');c.textContent=t;c.classList.remove('go');void c.offsetWidth;c.classList.add('go')}
+function burst(x,y,col,n=10,sp=4){const px=(x+.5)*cs,py=(y+.5)*cs;for(let i=0;i<n;i++)parts.push({x:px,y:py,vx:(Math.random()-.5)*sp*2,vy:(Math.random()-1)*sp*1.5,life:1,col,r:2+Math.random()*cs*.08})}
+function floater(x,y,t,col='#ffd34d',sz=.4){floaters.push({x:(x+.5)*cs,y:(y+.5)*cs,t,col,sz,life:1})}
+function size(){const r=$('wrap').getBoundingClientRect();cs=Math.floor(Math.min((r.width-10)/W,(r.height-10)/H));const d=Math.min(2,devicePixelRatio||1);cv.style.width=cs*W+'px';cv.style.height=cs*H+'px';cv.width=cs*W*d;cv.height=cs*H*d;cx.setTransform(d,0,0,d,0,0)}
+function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
+const T=(t,o={})=>Object.assign({t,y:0,vy:0},o);
+function drawTile(c,x,y,t){const px=x*cs,py=(y+c.y)*cs,p=cs*.04;
+ if(c.t==='N'){const s=c.s,r=cs*(.2+s*.06);const g=cx.createRadialGradient(px+cs*.4,py+cs*.4,1,px+cs/2,py+cs/2,r);g.addColorStop(0,'#fff6b0');g.addColorStop(.4,'#ffd34d');g.addColorStop(1,'#b87a08');rr(px+p,py+p,cs-2*p,cs-2*p,cs*.18);cx.fillStyle='#3a2a18';cx.fill();cx.save();cx.shadowColor='#ffb000';cx.shadowBlur=10+s*6+Math.sin(t/200+x+y)*5;cx.fillStyle=g;cx.beginPath();cx.ellipse(px+cs/2,py+cs/2,r,r*.82,.4,0,7);cx.fill();cx.restore();cx.fillStyle='#fff';cx.globalAlpha=.5+.5*Math.sin(t/180+x*2+y);cx.beginPath();cx.arc(px+cs/2-r*.35,py+cs/2-r*.3,r*.18,0,7);cx.fill();cx.globalAlpha=1;return}
+ if(c.t==='B'){rr(px+p,py+p,cs-2*p,cs-2*p,cs*.18);cx.fillStyle='#3a2a18';cx.fill();const g=cx.createRadialGradient(px+cs*.4,py+cs*.35,1,px+cs/2,py+cs/2,cs*.45);g.addColorStop(0,'#c8c8c0');g.addColorStop(1,'#5a5a55');cx.fillStyle=g;cx.beginPath();cx.ellipse(px+cs/2,py+cs/2,cs*.42,cs*.38,0,0,7);cx.fill();return}
+ if(c.t==='X'||c.t==='GAS'){rr(px+p,py+p,cs-2*p,cs-2*p,cs*.18);cx.fillStyle=c.t==='X'?'#5a1a10':'#2f4a1a';cx.fill();if(c.t==='GAS'){cx.save();cx.globalAlpha=.6+.3*Math.sin(t/250+x);cx.fillStyle='#9f6';cx.beginPath();cx.arc(px+cs*.4,py+cs*.55,cs*.18,0,7);cx.arc(px+cs*.62,py+cs*.42,cs*.14,0,7);cx.fill();cx.restore()}cx.font=`${cs*.55}px sans-serif`;cx.textAlign='center';cx.textBaseline='middle';cx.fillText(c.t==='X'?'🧨':'💨',px+cs/2,py+cs/2+2);cx.textBaseline='alphabetic';return}
+ if(c.t==='E'){cx.fillStyle='#120b06';cx.fillRect(px,py,cs,cs);return}
+ const col=COL[c.t]||COL.D;const g=cx.createLinearGradient(px,py,px,py+cs);g.addColorStop(0,col[0]);g.addColorStop(1,col[1]);rr(px+p,py+p,cs-2*p,cs-2*p,cs*.18);cx.fillStyle=g;cx.fill();cx.fillStyle='#ffffff22';rr(px+p*2,py+p*2,cs-4*p,cs*.18,cs*.1);cx.fill();
+ const seed=(x*7+y*13)%5;cx.fillStyle='#0003';for(let i=0;i<4;i++){cx.beginPath();cx.arc(px+cs*(.25+((seed+i*3)%5)*.12),py+cs*(.35+((seed*2+i)%4)*.13),cs*.04,0,7);cx.fill()}}
+function frame(t){requestAnimationFrame(frame);cx.save();cx.clearRect(0,0,cs*W,cs*H);if(shake>0){cx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.88;if(shake<.5)shake=0}
+ cx.fillStyle='#24160b';cx.fillRect(-20,-20,cs*W+40,cs*H+40);
+ for(let x=0;x<W;x++)for(let y=0;y<H;y++){const c=B[x]&&B[x][y];if(!c)continue;if(c.y<0){c.vy+=.02;c.y=Math.min(0,c.y+c.vy)}else c.vy=0;drawTile(c,x,y,t)}
+ if(ghost&&mode===1){cx.save();cx.strokeStyle='#ff5a2a';cx.fillStyle='rgba(255,120,40,.22)';cx.lineWidth=4;cx.setLineDash([8,6]);const r=G.R;rr((ghost[0]-r)*cs+2,(ghost[1]-r)*cs+2,(2*r+1)*cs-4,(2*r+1)*cs-4,cs*.2);cx.fill();cx.stroke();cx.setLineDash([]);cx.font=`${cs*.8}px sans-serif`;cx.textAlign='center';cx.fillText('🧨',(ghost[0]+.5)*cs,(ghost[1]+.8)*cs);cx.restore()}
+ for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.25;p.life-=.025;cx.globalAlpha=Math.max(0,p.life);cx.fillStyle=p.col;cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill()}parts=parts.filter(p=>p.life>0);
+ for(const f of floaters){f.y-=.8;f.life-=.016;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*f.sz}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';const fx=Math.max(cs*1.5,Math.min(cs*W-cs*1.5,f.x));cx.strokeText(f.t,fx,f.y);cx.fillStyle=f.col;cx.fillText(f.t,fx,f.y)}floaters=floaters.filter(f=>f.life>0);cx.globalAlpha=1;cx.restore()}
+function hud(a,al,b,bl,c){$('h1').textContent=a;$('h1l').textContent=al;$('h2').textContent=b;$('h2l').textContent=bl;$('h3').textContent=c}
+function card(ic,html,btn,fn,btn2,fn2){$('card').innerHTML=`<div class="ic">${ic}</div><p>${html}</p><button class="btn" id="cb1">${btn}</button>${btn2?` <button class="btn s" id="cb2">${btn2}</button>`:''}`;$('ov').classList.add('on');$('cb1').onclick=()=>{$('ov').classList.remove('on');fn&&fn()};if(btn2)$('cb2').onclick=()=>{$('ov').classList.remove('on');fn2&&fn2()}}
+function endCard(won,txt){if(won){SFX.bank();call('YOU WIN!');for(let i=0;i<30;i++)setTimeout(()=>burst(rnd(W),rnd(H),['#ffd34d','#fff','#ff9a3a'][rnd(3)],8,7),i*40)}const gen=GEN;setTimeout(()=>gen===GEN&&card(won?'🏆':'⛏',txt,'↻ Play again',()=>start(mode),'Try another',()=>{}),won?1100:600)}
+const nb=(x,y)=>[[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b])=>a>=0&&b>=0&&a<W&&b<H);
+function group(x,y,pred){const seen=new Set([x+','+y]),out=[[x,y]],st=[[x,y]];while(st.length){const[a,b]=st.pop();for(const[c,d]of nb(a,b)){const k=c+','+d;if(!seen.has(k)&&B[c][d]&&pred(B[c][d])){seen.add(k);out.push([c,d]);st.push([c,d])}}}return out}
+async function settle(){for(let i=0;i<80;i++){let m=false;for(let x=0;x<W;x++)for(let y=0;y<H;y++)if(B[x][y]&&B[x][y].y<0)m=true;if(!m)return;await sleep(30)}for(let x=0;x<W;x++)for(let y=0;y<H;y++)if(B[x][y])B[x][y].y=0}
+
+// ================= 1. CASCADE DIG =================
+const M1={how:'Tap dirt to dig it out. Everything above <b>falls down</b>. Slide <b>3+ gold together</b> to pop them for a combo!',
+ rT(){const r=Math.random();return r<.2?T('N',{s:1}):r<.24?T('N',{s:2}):T(DIRT[rnd(3)])},
+ init(){G={digs:14,gold:0,target:45,chainBest:0};B=[];for(let x=0;x<W;x++){B[x]=[];for(let y=0;y<H;y++)B[x][y]=M1.rT()}
+  // no instant pops at start
+  for(let k=0;k<3;k++)for(let x=0;x<W;x++)for(let y=0;y<H;y++)if(B[x][y].t==='N'&&group(x,y,o=>o.t==='N').length>=3)B[x][y]=T(DIRT[rnd(3)]);M1.hud()},
+ hud(){hud(G.digs,'DIGS LEFT',G.gold,'GOLD (OZ)',G.target)},
+ async fall(){for(let x=0;x<W;x++){let w=H-1;for(let y=H-1;y>=0;y--){if(B[x][y]){if(w!==y){B[x][w]=B[x][y];B[x][w].y-=(w-y);B[x][y]=null}w--}}for(let y=w;y>=0;y--){B[x][y]=M1.rT();B[x][y].y=-(w+1)}}await settle()},
+ async tap(x,y){const c=B[x][y];if(!c||busy||G.digs<=0)return;busy=true;const g0=GEN;try{G.digs--;
+  if(c.t==='N'){const v=VAL[c.s];G.gold+=v;floater(x,y,'+'+v+' oz');SFX.coin(0);burst(x,y,'#ffd34d',10,5)}else{SFX.dig();burst(x,y,COL[c.t][0],10,4)}
+  B[x][y]=null;shake=3;hap(10);M1.hud();await sleep(90);await M1.fall();
+  let chain=0;for(let loop=0;loop<20;loop++){const seen=new Set(),pops=[];for(let a=0;a<W;a++)for(let b=0;b<H;b++){if(seen.has(a+','+b)||!B[a][b]||B[a][b].t!=='N')continue;const g=group(a,b,o=>o.t==='N');g.forEach(p=>seen.add(p+''));if(g.length>=3)pops.push(g)}
+   if(!pops.length)break;chain++;let sum=0;for(const g of pops){const base=g.reduce((s,[a,b])=>s+VAL[B[a][b].s],0);const v=Math.round(base*(1+.5*(g.length-3))*chain);sum+=v;const[a,b]=g[0];for(const[p,q]of g){burst(p,q,'#ffd34d',14,6);burst(p,q,'#fff',5,4);B[p][q]=null}
+    // a bigger nugget is left behind where the group was
+    B[a][b]=T('N',{s:Math.min(3,1+Math.floor(g.length/3))});floater(a,b,`+${v} oz`,'#fff3a0',.55)}
+   G.gold+=sum;SFX.pop(chain);hap(30+chain*20);shake=Math.min(18,6+chain*4);call(chain>1?`CHAIN ×${chain}!`:'GOLD POP!');M1.hud();await sleep(380);await M1.fall()}
+  G.chainBest=Math.max(G.chainBest,chain);if(g0!==GEN)return;
+  if(G.gold>=G.target)endCard(true,`<b>Cascade cleared!</b><br>🟡 ${G.gold} oz with ${G.digs} digs to spare.<br>Best chain: ×${G.chainBest}`);else if(G.digs<=0)endCard(false,`<b>Out of digs!</b><br>🟡 ${G.gold} of ${G.target} oz.<br><small>Tip: dig <b>under</b> gold so it drops next to more gold.</small>`)}finally{busy=false}}};
+
+// ================= 2. AIM THE DYNAMITE =================
+const M2={how:'<b>Drag</b> to aim, <b>let go</b> to blast. Hit 🧨 and 💨 gas to set off <b>chain blasts</b>. Find the perfect spot!',
+ init(){G={sticks:3,gold:0,target:70,R:1};  // hand-placed layout: gold clusters, dynamite crates and gas pockets so a smart first blast chains
+  const R=[['D','D','N2','D','D','K','N1'],['D','B','N1','D','B','D','D'],['N1','D','GAS','D','N2','D','D'],['D','D','D','X','N1','D','D'],['K','N2','D','D','D','N1','K'],['D','N1','B','GAS','D','D','N2'],['D','N2','D','D','D','X','D'],['N1','D','K','N3','D','N2','D'],['N2','D','D','D','N1','D','N1']];
+  B=[];for(let x=0;x<W;x++){B[x]=[];for(let y=0;y<H;y++){const k=R[y][x];B[x][y]=k[0]==='N'&&k!=='N'?T('N',{s:+k[1]}):k==='GAS'?T('GAS'):k==='X'?T('X'):T(k)}}M2.hud()},
+ hud(){hud(G.sticks,'DYNAMITE',G.gold,'GOLD (OZ)',G.target)},
+ async blast(cx0,cy0,r,depth){SFX.boom();hap(60);shake=Math.min(24,12+depth*5);if(depth>0)call(`CHAIN BLAST ×${depth+1}!`);else call('KABOOM!');const next=[];
+  for(let x=cx0-r;x<=cx0+r;x++)for(let y=cy0-r;y<=cy0+r;y++){if(x<0||y<0||x>=W||y>=H)continue;const c=B[x][y];if(!c||c.t==='E')continue;
+   if(c.t==='N'){const v=VAL[c.s]*(1+depth);G.gold+=v;floater(x,y,`+${v} oz`,depth?'#ffb347':'#ffd34d',depth?.5:.42);burst(x,y,'#ffd34d',14,6)}
+   else if(c.t==='X'||c.t==='GAS'){if(!(x===cx0&&y===cy0&&depth>0))next.push([x,y,c.t==='GAS'?2:1])}
+   else burst(x,y,c.t==='B'?'#999':(COL[c.t]||COL.D)[0],8,5);
+   burst(x,y,'#ff7a1a',4,6);B[x][y]=T('E')}
+  M2.hud();for(const[x,y,rr2]of next){await sleep(260);await M2.blast(x,y,rr2,depth+1)}},
+ async place(x,y){if(busy||G.sticks<=0)return;busy=true;const g0=GEN;try{G.sticks--;M2.hud();await M2.blast(x,y,G.R,0);await sleep(400);if(g0!==GEN)return;
+  if(G.gold>=G.target)endCard(true,`<b>Perfect blasting!</b><br>🟡 ${G.gold} oz with ${G.sticks} stick${G.sticks===1?'':'s'} left.`);else if(G.sticks<=0)endCard(false,`<b>Out of dynamite!</b><br>🟡 ${G.gold} of ${G.target} oz.<br><small>Tip: blasts next to 🧨 or 💨 set them off, and chain gold pays double!</small>`)}finally{busy=false}}};
+
+// ================= 3. PUSH YOUR LUCK =================
+const M3={how:'Tap tiles to dig gold into your cart. Each dig shakes the cave. <b>Cash Out</b> to bank it, or risk a <b>cave-in</b>!',
+ init(){G={banked:0,cart:0,risk:0,trips:3,target:25};B=[];for(let x=0;x<W;x++){B[x]=[];for(let y=0;y<H;y++){const r=Math.random(),deep=y/H;B[x][y]=r<.18+deep*.12?T('N',{s:deep>.7&&Math.random()<.4?3:deep>.35&&Math.random()<.5?2:1}):Math.random()<.12?T('B'):T(DIRT[rnd(3)])}}
+  $('meterW').style.display='block';M3.hud();$('bot').innerHTML='<button class="btn cash" id="cashB">💰 Cash Out</button>';$('cashB').onclick=M3.cash},
+ hud(){hud(G.trips,'TRIPS LEFT',`${G.banked}+${G.cart}`,'BANKED + CART',G.target);$('meter').style.width=G.risk+'%';$('meterT').textContent=`Cave-in danger · next dig ${Math.round(G.risk*.35)}%`+(G.cart?` · 🛒 ${G.cart} oz at stake`:'');const b=$('cashB');if(b)b.style.opacity=G.cart?1:.5},
+ async tap(x,y){const c=B[x][y];if(busy||G.trips<=0||!c||c.t==='E')return;busy=true;try{
+  // the roll uses the risk shown BEFORE this dig, so what you see is what you risk
+  if(G.risk>0&&Math.random()*100<G.risk*.35){await M3.caveIn();return}
+  const add=c.t==='B'?10:c.t==='N'?4+c.s*2:3;
+  if(c.t==='N'){const v=VAL[c.s];G.cart+=v;floater(x,y,'+'+v+' oz');SFX.coin(c.s);burst(x,y,'#ffd34d',12,5)}else{SFX.dig();burst(x,y,c.t==='B'?'#999':COL[c.t][0],10,4);if(c.t==='B'){G.cart+=2;floater(x,y,'+2 oz (rock)','#ddd')}}
+  B[x][y]=T('E');G.risk=Math.min(95,G.risk+add);shake=2+G.risk/10;if(G.risk>=40)SFX.creak();hap(10);M3.hud()}finally{busy=false}},
+ async caveIn(){SFX.crack();hap(200);shake=30;call('CAVE-IN!');for(let i=0;i<40;i++)setTimeout(()=>burst(rnd(W),rnd(3),'#8a5a2b',8,5),i*20);const lost=G.cart;G.cart=0;G.risk=0;G.trips--;
+  // rubble refills a few dug tiles
+  for(let x=0;x<W;x++)for(let y=0;y<H;y++)if(B[x][y].t==='E'&&Math.random()<.5)B[x][y]=T(DIRT[rnd(3)]);floater(3,4,lost?`-${lost} oz lost!`:'Phew, cart was empty','#ff6a5a',.5);M3.hud();await sleep(900);busy=false;M3.check()},
+ cash(){if(busy||!G.cart||G.trips<=0)return;G.banked+=G.cart;floater(3,4,`+${G.cart} oz banked!`,'#9f6',.55);G.cart=0;G.risk=0;G.trips--;SFX.bank();call('BANKED!');hap(40);M3.hud();M3.check()},
+ check(){if(G.banked>=G.target)endCard(true,`<b>Smart mining!</b><br>🟡 ${G.banked} oz banked.`);else if(G.trips<=0)endCard(false,`<b>Trips used up!</b><br>🟡 ${G.banked} of ${G.target} oz banked.<br><small>Tip: the risk is shown on the meter. Cash out before it gets scary!</small>`)}};
+
+const MODES=[M1,M2,M3];
+let GEN=0;function start(m){GEN++;mode=m;busy=false;$('ov').classList.remove('on');ghost=null;parts=[];floaters=[];$('meterW').style.display='none';$('bot').innerHTML='<button class="btn s" id="rsB">↻ Restart</button>';$('rsB').onclick=()=>start(mode);
+ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',+t.dataset.m===m));$('how').innerHTML=MODES[m].how;MODES[m].init();try{history.replaceState(null,'','?try='+(m+1))}catch(e){}}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ac();start(+t.dataset.m)});
+const cell=e=>{const r=cv.getBoundingClientRect();const x=Math.floor((e.clientX-r.left)/cs),y=Math.floor((e.clientY-r.top)/cs);return x>=0&&y>=0&&x<W&&y<H?[x,y]:null};
+cv.addEventListener('pointerdown',e=>{ac();if(mode===1&&!busy&&G.sticks>0){ghost=cell(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}}});
+cv.addEventListener('pointermove',e=>{if(mode===1&&ghost){const c=cell(e);if(c)ghost=c}});
+cv.addEventListener('pointerup',e=>{const c=cell(e);if(mode===1){const g=c||ghost;ghost=null;if(g)M2.place(g[0],g[1]);return}if(c)MODES[mode].tap(c[0],c[1])});
+addEventListener('resize',size);size();const q=parseInt(new URLSearchParams(location.search).get('try'),10);start(q>=1&&q<=3?q-1:0);requestAnimationFrame(frame);
+window.__try={get G(){return G},get B(){return B},start,M1,M2,M3,get busy(){return busy}};
+</script></body></html>
