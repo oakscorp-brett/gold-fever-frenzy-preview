@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Gold Fever Frenzy · Tunnel Digging prototype</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;background:#1c120a;color:#f4e6c8;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;user-select:none}
+#app{display:flex;flex-direction:column;height:100%;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.top{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(#3b2614,#2a1a0e);border-bottom:2px solid #5a3a1c}
+.btn{background:linear-gradient(#ffcf4a,#e6a412);color:#3a2205;border:0;border-radius:14px;font-weight:900;padding:10px 16px;font-size:16px;box-shadow:0 3px 0 #9a6a08}.btn.s{background:#5a3a1c;color:#ffd34d;box-shadow:0 3px 0 #2a1a0e}
+h1{font-size:18px;margin:0;text-align:center}
+.hud{display:flex;gap:10px;justify-content:center;padding:10px}.pill{background:#2a1a0e;border:2px solid #5a3a1c;border-radius:14px;padding:6px 14px;text-align:center}.pill b{display:block;font-size:24px;color:#ffd34d}.pill small{font-size:11px;opacity:.8;letter-spacing:.05em}
+#wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px}canvas{touch-action:manipulation;border-radius:12px;box-shadow:0 0 0 3px #5a3a1c}
+#msg{text-align:center;min-height:22px;font-size:15px;padding:4px 10px;opacity:.9}
+#ov{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}#ov.on{display:flex}
+.card{background:linear-gradient(#4a2f17,#2a1a0e);border:3px solid #ffd34d;border-radius:22px;padding:22px;max-width:340px;text-align:center}.card .ic{font-size:64px}.card p{font-size:18px;line-height:1.4}
+.note{font-size:12px;opacity:.6;text-align:center;padding:0 10px 6px}
+</style></head><body><div id="app">
+<div class="top"><button class="btn s" id="prevB">◀</button><h1 id="name">Level</h1><button class="btn s" id="nextB">▶</button></div>
+<div class="hud"><div class="pill"><b id="digs">0</b><small>DIGS LEFT</small></div><div class="pill"><b id="gold">0</b><small>GOLD (OZ)</small></div><div class="pill"><b id="tgt">0</b><small>TARGET</small></div></div>
+<div id="msg"></div><div id="wrap"><canvas id="cv"></canvas></div>
+<div style="display:flex;justify-content:center;gap:10px;padding:8px"><button class="btn s" id="resetB">↻ Restart</button></div>
+<div class="note">Prototype: Tunnel Digging · rock 🪨 = 2 digs · spring 💧 = can't dig</div>
+</div><div id="ov"><div class="card" id="card"></div></div>
+<script src="core.js"></script><script src="levels.js"></script><script>
+const T=Tunnel,LV=TUNNEL_LEVELS,{W,H}=T;const $=id=>document.getElementById(id);
+let s,li=0,cs=40,SKY=0,cv=$('cv'),cx=cv.getContext('2d'),fx=[],shakeT=0;
+let AC=null;function tone(f,d=.12,type='square',v=.07,sl=0){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
+function size(){const r=$('wrap').getBoundingClientRect();cs=Math.floor(Math.min((r.width-12)/W,(r.height-12)/(H+.6)));SKY=Math.round(cs*.6);const d=Math.min(2,devicePixelRatio||1);cv.style.width=cs*W+'px';cv.style.height=(cs*H+SKY)+'px';cv.width=cs*W*d;cv.height=(cs*H+SKY)*d;cx.setTransform(d,0,0,d,0,0)}
+function start(i){li=(i+LV.length)%LV.length;s=T.newGame(LV[li]);fx=[];$('name').textContent=`⛏ ${li+1}. ${LV[li].name}`;hud();msg('Tap a glowing tile to dig. Reach the gold with your tunnel!');
+ try{history.replaceState(null,'','?level='+(li+1))}catch(e){}
+ if(!localStorage.getItem('tunnelTip'))card('⛏',`<b>NEW: Tunnel Digging!</b><br>${LV[0].tip}`,'Got it!',()=>localStorage.setItem('tunnelTip','1'))}
+function hud(){$('digs').textContent=s.digs;$('gold').textContent=s.gold;$('tgt').textContent=s.lv.target}
+function msg(t){$('msg').innerHTML=t}
+function card(ic,html,btn,fn,btn2,fn2){$('card').innerHTML=`<div class="ic">${ic}</div><p>${html}</p><button class="btn" id="cb1">${btn}</button>${btn2?` <button class="btn s" id="cb2">${btn2}</button>`:''}`;$('ov').classList.add('on');
+ $('cb1').onclick=()=>{$('ov').classList.remove('on');fn&&fn()};if(btn2)$('cb2').onclick=()=>{$('ov').classList.remove('on');fn2&&fn2()}}
+function tap(ev){if(s.over||$('ov').classList.contains('on'))return;const r=cv.getBoundingClientRect();const x=Math.floor((ev.clientX-r.left)/cs),y=Math.floor((ev.clientY-r.top-SKY)/cs);if(x<0||y<0||x>=W||y>=H)return;
+ const c=s.g[y][x];if(c.dug)return;if(c.t==='w'){msg('💧 That\'s an underground spring. Dig around it!');tone(200,.15,'sine');return}
+ if(!T.canDig(s,x,y)){msg('You can only dig <b>next to your tunnel</b> (or from the surface).');shakeT=8;tone(120,.12,'square',.05);return}
+ const res=T.dig(s,x,y);if(res.cracked){msg('🪨 Cracked! One more dig breaks the rock.');tone(150,.15,'sawtooth',.08,-60);fx.push({x,y,t:'crack',life:1})}
+ else if(res.got){msg(`🟡 +${res.got} oz!`);tone(880,.1,'square',.07,400);setTimeout(()=>tone(1320,.12,'square',.06),90);fx.push({x,y,t:'+'+res.got+' oz',life:1})}else{tone(140,.08,'triangle',.08,-60);msg('')}
+ hud();if(s.over)setTimeout(end,500)}
+function end(){if(s.won){tone(660,.15);setTimeout(()=>tone(990,.25),150);const spare=s.digs;card('🏆',`<b>Claim Cleared!</b><br>🟡 ${s.gold} oz with <b>${spare}</b> dig${spare===1?'':'s'} to spare.`,li<LV.length-1?'Next ▶':'Play again',()=>start(li<LV.length-1?li+1:0),'↻ Retry',()=>start(li))}
+ else{tone(200,.3,'sawtooth',.07,-120);card('⛽',`<b>Out of digs!</b><br>You found ${s.gold} of ${s.lv.target} oz.<br><small>Tip: plan one tunnel that reaches several nuggets.</small>`,'↻ Try again',()=>start(li))}}
+cv.addEventListener('pointerup',tap);$('resetB').onclick=()=>start(li);$('prevB').onclick=()=>start(li-1);$('nextB').onclick=()=>start(li+1);
+const DIRT=[['#8a5a2b','#6e4520'],['#b5653a','#8c4a28'],['#5a6a4a','#3e4a32'],['#8b8b86','#6a6a64']];
+function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
+function draw(t){requestAnimationFrame(draw);if(!s)return;cx.save();cx.clearRect(0,0,cs*W,cs*H+SKY);if(shakeT>0){cx.translate((Math.random()-.5)*shakeT,0);shakeT*=.8;if(shakeT<.5)shakeT=0}
+ const sky=cx.createLinearGradient(0,0,0,SKY);sky.addColorStop(0,'#7ec8f0');sky.addColorStop(1,'#cfe9b0');cx.fillStyle=sky;cx.fillRect(0,0,cs*W,SKY);cx.fillStyle='#5d8a32';cx.fillRect(0,SKY-5,cs*W,5);
+ cx.font=`${SKY*.6}px sans-serif`;cx.textAlign='left';cx.fillText('⛺',4,SKY*.75);cx.textAlign='right';cx.fillText('🌲',cs*W-4,SKY*.75);
+ const F=new Set(s.over?[]:T.frontier(s).map(p=>p+''));
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=s.g[y][x],px=x*cs,py=SKY+y*cs,p=cs*.04;
+  if(c.dug){cx.fillStyle='#120b06';cx.fillRect(px,py,cs,cs);cx.fillStyle='#2a1a0e';cx.fillRect(px+cs*.1,py+cs*.1,cs*.8,cs*.8);continue}
+  if(c.t==='w'){const g=cx.createLinearGradient(px,py,px,py+cs);g.addColorStop(0,'#5ab0ff');g.addColorStop(1,'#1a5aa0');rr(px+p,py+p,cs-2*p,cs-2*p,cs*.18);cx.fillStyle=g;cx.fill();cx.strokeStyle='#bfe4ff';cx.lineWidth=2;cx.beginPath();for(let i=0;i<=8;i++){const xx=px+cs*.15+i*cs*.0875,yy=py+cs*.5+Math.sin(t/200+i+x)*cs*.05;i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.stroke();continue}
+  const col=DIRT[(x*3+y*5)%3];const g=cx.createLinearGradient(px,py,px,py+cs);g.addColorStop(0,col[0]);g.addColorStop(1,col[1]);rr(px+p,py+p,cs-2*p,cs-2*p,cs*.16);cx.fillStyle=g;cx.fill();
+  if(c.t==='r'){const rg=cx.createRadialGradient(px+cs*.4,py+cs*.35,1,px+cs/2,py+cs/2,cs*.45);rg.addColorStop(0,'#c8c8c0');rg.addColorStop(1,'#5a5a55');cx.fillStyle=rg;cx.beginPath();cx.ellipse(px+cs/2,py+cs/2,cs*.42,cs*.38,0,0,7);cx.fill();
+   if(c.hp<2){cx.strokeStyle='#222';cx.lineWidth=2.5;cx.beginPath();cx.moveTo(px+cs*.3,py+cs*.22);cx.lineTo(px+cs*.52,py+cs*.5);cx.lineTo(px+cs*.4,py+cs*.78);cx.stroke()}else{cx.fillStyle='#fff';cx.font=`900 ${cs*.22}px sans-serif`;cx.textAlign='center';cx.fillText('×2',px+cs/2,py+cs*.6)}}
+  if(c.t==='n'){const sz=c.v>=8?3:c.v>=3?2:1,r=cs*(.16+sz*.07);const gg=cx.createRadialGradient(px+cs*.42,py+cs*.42,1,px+cs/2,py+cs/2,r);gg.addColorStop(0,'#fff6b0');gg.addColorStop(.4,'#ffd34d');gg.addColorStop(1,'#b87a08');cx.save();cx.shadowColor='#ffb000';cx.shadowBlur=10+sz*5+Math.sin(t/220+x+y)*5;cx.fillStyle=gg;cx.beginPath();cx.ellipse(px+cs/2,py+cs/2,r,r*.82,.4,0,7);cx.fill();cx.restore();
+   cx.fillStyle='#3a2205';cx.font=`900 ${cs*.2}px sans-serif`;cx.textAlign='center';cx.fillText(c.v,px+cs/2,py+cs*.57)}
+  if(F.has(x+','+y)){const a=.35+.25*Math.sin(t/260);cx.strokeStyle=`rgba(255,240,170,${a})`;cx.lineWidth=3;rr(px+3,py+3,cs-6,cs-6,cs*.16);cx.stroke()}}
+ for(const f of fx){f.life-=.02;if(f.t==='crack')continue;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*.42}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';const yy=SKY+f.y*cs+cs*.4-(1-f.life)*cs;cx.strokeText(f.t,f.x*cs+cs/2,yy);cx.fillStyle='#ffd34d';cx.fillText(f.t,f.x*cs+cs/2,yy);cx.globalAlpha=1}fx=fx.filter(f=>f.life>0);cx.restore()}
+addEventListener('resize',size);size();const q=parseInt(new URLSearchParams(location.search).get('level'),10);start(q>=1&&q<=LV.length?q-1:1);requestAnimationFrame(draw);
+window.__tunnel={get s(){return s},start};
+</script></body></html>
