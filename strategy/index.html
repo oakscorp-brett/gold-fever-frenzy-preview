@@ -372,7 +372,7 @@ function frame(t){requestAnimationFrame(frame);if(!$('sPlay').classList.contains
  for(let x=0;x<W;x++)for(let y=0;y<H;y++){const c=B[x]&&B[x][y];if(c)drawTile(c,x,y,t)}cx.restore();
  if(armed){cx.strokeStyle='#ff4';cx.lineWidth=3;cx.setLineDash([8,6]);cx.strokeRect(2,2,cs*W-4,cs*H-4);cx.setLineDash([])}
  for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.25;p.life-=.025;cx.globalAlpha=Math.max(0,p.life);cx.fillStyle=p.col;cx.fillRect(p.x,p.y,p.r,p.r)}parts=parts.filter(p=>p.life>0);
- for(const f of floaters){f.y-=.8;f.life-=.018;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*.34}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';cx.strokeText(f.txt,f.x,f.y);cx.fillStyle=f.col;cx.fillText(f.txt,f.x,f.y)}floaters=floaters.filter(f=>f.life>0);
+ for(const f of floaters){f.y-=.8;f.life-=.018;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*(f.sz||.34)}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';cx.strokeText(f.txt,f.x,f.y);cx.fillStyle=f.col;cx.fillText(f.txt,f.x,f.y)}floaters=floaters.filter(f=>f.life>0);
  if(shimmer>0){cx.globalAlpha=shimmer*.18;cx.fillStyle='#ffd34d';cx.fillRect(0,0,cs*W,cs*H);shimmer-=.05}
  cx.globalAlpha=1;cx.restore()}
 requestAnimationFrame(frame);
@@ -1413,6 +1413,48 @@ const _tc=tapCell;tapCell=async function(x,y){if(!st||st.over||busy||!B[x]||!B[x
 const _uh=updHud;updHud=function(){_uh.apply(this,arguments);if(!st||!L||L.bonus||!STREAK_ON(L.id))return;const m=STREAK[Math.min(3,st.chain||0)];const el=$('goals');if(el)el.insertAdjacentHTML('beforeend',`<span class="goal ${m>1?'ok':''}" id="streakG">🔥 ×${m}</span>`)};
 const _w=win;win=async function(){const r=await _w.apply(this,arguments);try{if(st&&st.spare>0&&!L.bonus){const s=$('ovCard').querySelector('.stars');if(s)s.insertAdjacentHTML('afterend',`<p id="spareP" style="font-size:17px">⛽ <b>${st.spare}</b> spare dig${st.spare>1?'s':''} × ${(st.spareOz/st.spare).toFixed(1)} oz = <b>+${st.spareOz.toFixed(1)} oz</b> bonus</p>${S.coach.spare?'':'<p style="font-size:13px;opacity:.8">Finish with digs to spare for bonus gold and more ⭐ stars!</p>'}`);S.coach.spare=1;save()}}catch(e){}return r};
 window.__strat={STREAK,bundleMult,streakMult};
+})();
+</script>
+<script>
+// ===== 1.2: "New this level!" intro cards (shown once, before play) =====
+(function(){const CARDS={1:['introStreak','streak','🔥','NEW: Gold Streak!','Find gold dig after dig to build up to <b>×2</b>.<br>Save your biggest nugget for the top of the streak!'],3:['introBundle','bundle','💰','NEW: Nugget Bundles!','Touching nuggets pay extra together.<br>Dig the dirt between them first!']};
+const _sl=startLevel;startLevel=function(i){const r=_sl.apply(this,arguments);const c=CARDS[i];if(!c||S.coach[c[0]]||window.SIM||(LV[i]&&LV[i].bonus))return r;const tk=startLevel.tk=(startLevel.tk||0)+1;let n=0;
+ // wait until the gear picker (if any) is done and this level is on screen
+ const wait=()=>{if(tk!==startLevel.tk||S.coach[c[0]])return;const on=$('ov').classList.contains('on');if(!(L&&L.id===i&&st&&!st.over&&!on&&$('sPlay').classList.contains('on'))){if(++n<1500)setTimeout(wait,150);return}show()};
+ const show=()=>{const co=document.getElementById('coach');const coWas=co&&co.style.visibility;if(co)co.style.visibility='hidden';
+  showOv(`<div id="introCard" style="text-align:center"><div style="font-size:72px;line-height:1">${c[2]}</div><h2 style="margin:8px 0">${c[3]}</h2><p style="font-size:18px;line-height:1.4">${c[4]}</p><button class="btn g" id="introOk" style="font-size:24px;padding:16px 40px;margin-top:8px">Got it!</button></div>`,
+   ()=>onTap($('introOk'),()=>{S.coach[c[0]]=1;S.coach[c[1]]=1;save();hideOv();if(co)co.style.visibility=coWas||'';try{SFX.click()}catch(e){}}))};wait();
+ return r};
+window.__introCards=CARDS})();
+</script>
+<script>
+// ===== 1.2: make strategy obvious: streak meter, bundle outlines, big payouts, ?level=N preview start =====
+(function(){const STK=__strat.STREAK;
+const css=document.createElement('style');css.textContent=`#streakG{display:none}
+.smeter{flex-basis:100%;box-sizing:border-box;padding:0 8px;display:flex;gap:4px;justify-content:center;align-items:center;margin-top:2px}
+.smeter .sl{font:900 13px sans-serif;color:#ffd34d;margin-right:4px}
+.smeter i{font-style:normal;font-size:13px!important;flex:1;min-width:0;max-width:64px;text-align:center;padding:4px 0;border-radius:10px;background:#2a1a0e;border:2px solid #5a3a1c;color:#8a7a6a;font:900 15px sans-serif;opacity:.75}
+.smeter i.on{background:linear-gradient(#ff9a3a,#d8460e);border-color:#ffd34d;color:#fff;opacity:1;box-shadow:0 0 10px #ff7a1a}
+.smeter.pulse{animation:smP .55s ease-out}.smeter.brk{animation:smB .6s ease-out}
+@keyframes smP{0%{transform:scale(1)}35%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes smB{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px);filter:hue-rotate(-40deg) saturate(3)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}`;document.head.appendChild(css);
+const on=()=>st&&L&&!L.bonus&&STREAK_ON(L.id);
+const _uh=updHud;updHud=function(){_uh.apply(this,arguments);if(!on())return;const ch=Math.min(3,st.chain||0),prev=st._shown==null?ch:st._shown;st._shown=ch;
+ let cls='';if(ch>prev)cls='pulse';else if(ch<prev&&prev>=1){cls='brk';crack()}
+ const segs=['×1','×1.25','×1.5','×2 🔥'].map((t,k)=>`<i class="${k<=ch?'on':''}">${k?'🔥':''}${t.replace(' 🔥','')}</i>`).join('');
+ const el=$('goals');if(el)el.insertAdjacentHTML('beforeend',`<div class="smeter ${cls}" id="smeter"><span class="sl">STREAK</span>${segs}</div>`)};
+function crack(){try{noise(.4,.45);tone(110,.35,'sawtooth',.14,-70);tone(70,.4,'square',.1,-30,.05)}catch(e){}try{hap('Heavy')}catch(e){}try{callout('💥 STREAK BROKEN!')}catch(e){}}
+// big payout floaters
+const _co=collectOz;collectOz=function(x,y,oz,combo){const m=(st&&st._mult||1)*(st&&st._bm||1);const n0=floaters.length;const r=_co.apply(this,arguments);const f=floaters[n0];
+ if(f){const g=oz*washMult()*m;f.txt='+'+g.toFixed(1)+' oz'+(m>1?' ×'+(+m.toFixed(2))+' 🔥':'');f.sz=m>1?.5:.42;f.x=Math.max(cs*1.6,Math.min(cs*W-cs*1.6,f.x));if(m>1)f.col='#ffb347'}return r};
+// bundle outlines + label before tapping
+let gc={t:-1,m:null};function groups(t){if(gc.t===t)return gc.m;const m=new Map();const seen=new Set();for(let x=0;x<W;x++)for(let y=0;y<H;y++){const c=B[x]&&B[x][y];if(!c||c.t!=='N'||c.ch||seen.has(x+','+y))continue;const g=group(x,y,o=>o.t==='N'&&!o.ch);g.forEach(p=>seen.add(p+''));if(g.length>=2){let top=g[0];for(const p of g)if(p[1]<top[1]||(p[1]===top[1]&&p[0]<top[0]))top=p;const set=new Set(g.map(p=>p+''));for(const p of g)m.set(p+'',{k:g.length,top:p[0]===top[0]&&p[1]===top[1],set})}}gc={t,m};return m}
+const _dt=drawTile;drawTile=function(c,x,y,t){_dt.apply(this,arguments);try{if(!st||st.over||!L||L.bonus||!BUNDLE_ON(L.id)||c.t!=='N'||c.ch||c.y!==0)return;const g=groups(t).get(x+','+y);if(!g)return;
+ const px=x*cs,py=y*cs,a=.6+.4*Math.sin(t/180);cx.save();cx.strokeStyle=`rgba(120,240,255,${a})`;cx.lineWidth=Math.max(3,cs*.07);cx.shadowColor='#6ff';cx.shadowBlur=14;
+ const sides=[[x,y-1,px,py,px+cs,py],[x,y+1,px,py+cs,px+cs,py+cs],[x-1,y,px,py,px,py+cs],[x+1,y,px+cs,py,px+cs,py+cs]];cx.beginPath();for(const[a2,b2,x1,y1,x2,y2]of sides){if(!g.set.has(a2+','+b2)){cx.moveTo(x1+2,y1+2);cx.lineTo(x2-2,y2-2)}}cx.stroke();cx.restore();
+ if(g.top){const lbl='×'+(+bundleMult(g.k).toFixed(2));cx.save();cx.font=`900 ${cs*.32}px sans-serif`;const w=cx.measureText(lbl).width+cs*.2;const lx=Math.min(cs*W-w/2-2,Math.max(w/2+2,px+cs/2)),ly=py+cs*.02;cx.fillStyle='#0c4a5a';rr(lx-w/2,ly,w,cs*.38,cs*.12);cx.fill();cx.strokeStyle='#6ff';cx.lineWidth=2;cx.stroke();cx.fillStyle='#bff';cx.textAlign='center';cx.fillText(lbl,lx,ly+cs*.3);cx.restore()}}catch(e){}};
+// preview helper: ?level=N jumps straight into level N
+try{const q=new URLSearchParams(location.search).get('level');const n=parseInt(q,10);if(n>=1&&n<=MAINLV&&!window.Capacitor?.isNativePlatform?.()){setTimeout(()=>{S.unlocked=Math.max(S.unlocked||1,n);S.claims=Math.max(S.claims||1,Math.ceil(n/10));save();try{hideOv()}catch(e){}document.getElementById('ov').classList.remove('on');startLevel(n-1)},900)}}catch(e){}
 })();
 </script>
 </body></html>
