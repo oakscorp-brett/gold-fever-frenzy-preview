@@ -18,4 +18,7 @@ function dig(g,x,y){if(g[y][x]!=='d')return false;g[y][x]='.';return true}
 function solve(lv,maxD){let g=parse(lv);settle(g);const start=key(g);let frontier=[[g,[]]];const seen=new Set([start]);
  for(let d=0;d<=(maxD||lv.digs);d++){const nx=[];for(const[gg,path]of frontier){if(goldLeft(gg)===0)return path;if(d===(maxD||lv.digs))continue;
   for(let y=0;y<gg.length;y++)for(let x=0;x<gg[0].length;x++)if(gg[y][x]==='d'){const g2=gg.map(r=>r.slice());dig(g2,x,y);settle(g2);const k=key(g2);if(seen.has(k))continue;seen.add(k);nx.push([g2,path.concat([[x,y]])])}}frontier=nx}return null}
-root.GoldDrop={parse,step,settle,goldLeft,dig,solve,key}})(typeof window!=='undefined'?window:global);
+// same search, from any board and number of digs left (used by Hint and the 'no way to win' check)
+function solveFrom(g0,left){const g=g0.map(r=>r.slice());settle(g);if(goldLeft(g)===0)return[];let frontier=[[g,[]]];const seen=new Set([key(g)]);
+ for(let d=0;d<left;d++){const nx=[];for(const[gg,path]of frontier){for(let y=0;y<gg.length;y++)for(let x=0;x<gg[0].length;x++)if(gg[y][x]==='d'){const g2=gg.map(r=>r.slice());dig(g2,x,y);settle(g2);const k=key(g2);if(seen.has(k))continue;seen.add(k);const p=path.concat([[x,y]]);if(goldLeft(g2)===0)return p;nx.push([g2,p])}}frontier=nx}return null}
+root.GoldDrop={solveFrom,parse,step,settle,goldLeft,dig,solve,key}})(typeof window!=='undefined'?window:global);
