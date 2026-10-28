@@ -5,11 +5,11 @@
 (function(root){
 function parse(lv){return lv.map.map(r=>r.split(''))}
 function key(g){return g.map(r=>r.join('')).join('/')}
-function step(g){const H=g.length,W=g[0].length;const moves=[];let got=0;
- for(let y=H-1;y>=0;y--)for(let x=0;x<W;x++){const c=g[y][x];if(c!=='g'&&c!=='r')continue;
+function step(g){const H=g.length,W=g[0].length;const moves=[];let got=0;const done=new Set();
+ for(let y=H-1;y>=0;y--)for(let x=0;x<W;x++){const c=g[y][x];if(c!=='g'&&c!=='r'||done.has(x+','+y))continue;
   if(y===H-1){if(c==='g'){g[y][x]='.';got++;moves.push({x,y,to:'cart'})}continue}
-  const below=g[y+1][x];if(below==='.'){g[y+1][x]=c;g[y][x]='.';moves.push({x,y,dx:0});continue}
-  if(below==='r'||below==='g'){for(const dx of[-1,1]){const nx=x+dx;if(nx<0||nx>=W)continue;if(g[y][nx]==='.'&&g[y+1][nx]==='.'){g[y][nx]=c;g[y][x]='.';moves.push({x,y,dx});break}}}}
+  const below=g[y+1][x];if(below==='.'){g[y+1][x]=c;g[y][x]='.';done.add(x+','+(y+1));moves.push({x,y,dx:0});continue}
+  if(below==='r'||below==='g'){for(const dx of[-1,1]){const nx=x+dx;if(nx<0||nx>=W)continue;if(g[y][nx]==='.'&&g[y+1][nx]==='.'){g[y][nx]=c;g[y][x]='.';done.add(nx+','+y);moves.push({x,y,dx});break}}}}
  return{moved:moves.length>0,got,moves}}
 function settle(g){let got=0,n=0;for(;n<200;n++){const s=step(g);got+=s.got;if(!s.moved)break}return got}
 function goldLeft(g){let n=0;for(const r of g)for(const c of r)if(c==='g')n++;return n}
