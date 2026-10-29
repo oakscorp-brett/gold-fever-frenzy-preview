@@ -315,7 +315,7 @@ const BNAME={dyn:'🧨 Dynamite',det:'📡 Gold Detector',plus:'⛽ +5 Digs'};
 function goalsMet(){const g=L.goals;return(!g.oz||st.oz>=g.oz)&&(!g.boulder||st.boulder>=g.boulder)&&(!g.water||st.water>=g.water)&&(!g.big||st.big>=g.big)&&(!g.mud||mudLeft()===0)&&(!g.cart||(st.cart||0)>=g.cart)&&(!g.score||gScore()>=g.score)}
 async function checkEnd(){updHud();if(st.over)return;
  if(goalsMet()){st.over=true;busy=true;await sleep(300);callout('MOTHER LODE FINALE!');if(!calm()){borderFlash=1;coinShower(40)}
-  const left=st.digs;for(let i=0;i<left;i++){st.digs--;const x=rnd(W),y=rnd(H);SFX.boom();shake=8;if(!calm()&&i%2===0)coinShower(12,(cv.getBoundingClientRect().left+(x+.5)*cs),(cv.getBoundingClientRect().top+(y+.5)*cs));st.cleared=(st.cleared||0)+5;const b=1.5*washMult();st.oz+=b;floater(x,y,'+'+b.toFixed(1),'#fff');burst(x,y,'#ffd34d',14,6);updHud();await sleep(140)}
+  const bd=Math.min(st.digs,st.bonusDigs||0);st.max=Math.max(1,st.max-(st.bonusDigs||0));st.digs-=bd;st.leftAtWin=st.digs;const left=st.digs;for(let i=0;i<left;i++){st.digs--;const x=rnd(W),y=rnd(H);SFX.boom();shake=8;if(!calm()&&i%2===0)coinShower(12,(cv.getBoundingClientRect().left+(x+.5)*cs),(cv.getBoundingClientRect().top+(y+.5)*cs));st.cleared=(st.cleared||0)+5;const b=1.5*washMult();st.oz+=b;floater(x,y,'+'+b.toFixed(1),'#fff');burst(x,y,'#ffd34d',14,6);updHud();await sleep(140)}
   const frac=left/st.max;const stars=frac>=.4?3:frac>=.2?2:1;win(stars);busy=false}
  else if(st.digs<=0){st.over=true;SFX.lose();setTimeout(()=>lose(),500)}}
 async function win(stars){const tier=st.oz>=L.goals.oz*2||st.oz>=60?'AMAZING DIG!':st.oz>=L.goals.oz*1.5?'GREAT DIG!':'NICE DIG!';busy=true;await jackpot(tier,st.oz,2600);busy=false;SFX.win();Music.sting();const prev=S.stars[L.id]||0;S.stars[L.id]=Math.max(prev,stars);S.oz+=st.oz;S.total+=st.oz;if(L.id+1>=S.unlocked)S.unlocked=Math.min(MAINLV,L.id+2);
@@ -326,22 +326,22 @@ async function win(stars){const tier=st.oz>=L.goals.oz*2||st.oz>=60?'AMAZING DIG
  for(let i=0;i<40;i++)setTimeout(()=>{if(cv)burst(rnd(W),rnd(H),['#ffd34d','#fff','#ff9a3a'][rnd(3)],8,7)},i*40)}
 function lose(){const g=L.goals,ms=[];if(g.oz&&st.oz<g.oz)ms.push(`${(g.oz-st.oz).toFixed(1)} oz`);if(g.boulder&&st.boulder<g.boulder)ms.push(`${g.boulder-st.boulder} boulders`);if(g.water&&st.water<g.water)ms.push(`${g.water-st.water} water`);if(g.big&&st.big<g.big)ms.push('a Big Nugget');
  const cost=8,free=!st.usedFree,hasB=S.boost.plus>0,canBuy=S.oz>=cost;
- const extra=free?`<button class="btn g" id="plusB" style="margin:6px;font-size:20px;padding:14px 22px">⛽ Extra +5 Digs — FREE</button><br><small>One free refill per try</small>`
+ const extra=free?`<button class="btn g" id="plusB" style="margin:6px;font-size:20px;padding:14px 22px">📺 Watch an ad → +5 digs</button><br><small>Once per try. (Preview: ads aren't hooked up yet, so no ad plays.)</small>`
   :hasB?`<button class="btn g" id="plusB" style="margin:6px;font-size:20px;padding:14px 22px">⛽ Use Extra +5 Digs (${S.boost.plus} left)</button>`
   :canBuy?`<button class="btn g" id="plusB" style="margin:6px;font-size:20px;padding:14px 22px">⛽ Extra +5 Digs for 🟡 ${cost} oz</button>`:'';
  showOv(`<h2>Out of Fuel!</h2><p>You still need <b>${ms.join(', ')}</b>.</p>${extra}<div style="display:flex;gap:8px;justify-content:center;margin-top:12px"><button class="btn" id="mapB3">Map</button><button class="btn g" id="retryB" style="font-size:18px">↻ Try Again</button></div><p style="opacity:.7;font-size:13px">Quitting keeps half your gold: 🟡 ${(st.oz*.5).toFixed(1)} oz</p>`,
- ()=>{const keep=()=>{S.oz+=st.oz*.5;save()};onTap($('mapB3'),()=>{keep();hideOv();showMap()});onTap($('retryB'),()=>{keep();hideOv();startLevel(L.id)});const p=$('plusB');if(p)onTap(p,()=>{if(free)st.usedFree=true;else if(hasB)S.boost.plus--;else S.oz-=cost;save();st.digs+=5;st.max+=5;st.over=false;hideOv();renderBoost();updHud();SFX.click&&SFX.click()})})}
+ ()=>{const keep=()=>{S.oz+=st.oz*.5;save()};onTap($('mapB3'),()=>{keep();hideOv();showMap()});onTap($('retryB'),()=>{keep();hideOv();startLevel(L.id)});const p=$('plusB');if(p)onTap(p,()=>{if(free)st.usedFree=true;else if(hasB)S.boost.plus--;else S.oz-=cost;save();st.digs+=5;st.max+=5;st.bonusDigs=(st.bonusDigs||0)+5;st.over=false;hideOv();renderBoost();updHud();SFX.click&&SFX.click()})})}
 function updHud(){if(!st)return;$('hDigs').textContent=st.digs;$('hOz').textContent=st.oz.toFixed(1);const g=L.goals,h=[];
  if(g.oz)h.push([`🟡 ${Math.min(st.oz,g.oz).toFixed(0)}/${g.oz} oz`,st.oz>=g.oz]);if(g.boulder)h.push([`🪨 ${Math.min(st.boulder,g.boulder)}/${g.boulder}`,st.boulder>=g.boulder]);if(g.water)h.push([`💧 ${Math.min(st.water,g.water)}/${g.water}`,st.water>=g.water]);if(g.big)h.push([`💰 Big Nugget ${Math.min(st.big,g.big)}/${g.big}`,st.big>=g.big]);if(g.mud){const m=mudLeft();h.push([`🟫 Mud left ${m}`,m===0])}if(g.cart)h.push([`🛒 ${Math.min(st.cart||0,g.cart)}/${g.cart} to cart`,(st.cart||0)>=g.cart]);if(g.score)h.push([`⭐ ${Math.min(gScore(),g.score)}/${g.score} pts`,gScore()>=g.score]);
  $('goals').innerHTML=h.map(([t,o])=>`<span class="goal ${o?'ok':''}">${o?'✔ ':''}${t}</span>`).join('')}
 function renderBoost(){const el=$('boost');el.innerHTML='';for(const k of['dyn','det','plus']){const d=document.createElement('div');d.className='bst'+(armed===k?' arm':'');d.innerHTML=BNAME[k].split(' ')[0]+`<b>${S.boost[k]||0}</b>`;
  onTap(d,()=>{if(busy||st.over)return;if((S.boost[k]||0)<=0){toast('No '+BNAME[k]+' left. Earn more with combos and 3-star levels!');return}SFX.click();
-  if(k==='plus'){S.boost.plus--;st.digs+=5;st.max+=5;save();toast('+5 digs!');updHud();renderBoost();return}
+  if(k==='plus'){S.boost.plus--;st.digs+=5;st.max+=5;st.bonusDigs=(st.bonusDigs||0)+5;save();toast('+5 digs!');updHud();renderBoost();return}
   armed=armed===k?null:k;if(armed)toast(k==='dyn'?'Tap where to blast!':'Tap the board to scan for gold');renderBoost()});el.appendChild(d)}}
 function startLevel(i){hap('Light');L=LV[i];armed=null;parts=[];floaters=[];st={digs:L.digs+S.up.digs,max:L.digs+S.up.digs,oz:0,ozRaw:0,boulder:0,water:0,big:0,over:false};
  if(S.up.rack>0){for(let j=0;j<S.up.rack;j++){const ks=['dyn','det','plus'];const k=ks[rnd(3)];S.boost[k]++}toast('Booster Shed: free booster'+(S.up.rack>1?'s':'')+' added!');save()}
  genBoard();show('sPlay');$('lvlName').textContent=`${CHAPTERS[L.ch].icon} Level ${i+1}`;sizeCanvas();renderBoost();updHud();
- if(i===0&&!S.stars[0])setTimeout(()=>toast('Tap a patch of dirt to dig it.<br>Tap gold 🟡 to collect it!<br>3 matching nuggets touching = BIGGER nugget',4500),300)}
+ }
 function sizeCanvas(){cv=$('cv');cv.style.width='0px';cv.style.height='0px';const p=$('play').getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1);cs=Math.floor(Math.min((p.width-24)/W,(p.height-24)/H));if(!cs||cs<20)cs=Math.floor(Math.min(window.innerWidth/W,(window.innerHeight*.6)/H));
  cv.style.width=cs*W+'px';cv.style.height=cs*H+'px';cv.width=cs*W*dpr;cv.height=cs*H*dpr;cx=cv.getContext('2d');cx.setTransform(dpr,0,0,dpr,0,0);ox=0}
 function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
@@ -371,7 +371,7 @@ function frame(t){requestAnimationFrame(frame);if(!$('sPlay').classList.contains
  for(let x=0;x<W;x++)for(let y=0;y<H;y++){const c=B[x]&&B[x][y];if(c)drawTile(c,x,y,t)}cx.restore();
  if(armed){cx.strokeStyle='#ff4';cx.lineWidth=3;cx.setLineDash([8,6]);cx.strokeRect(2,2,cs*W-4,cs*H-4);cx.setLineDash([])}
  for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.25;p.life-=.025;cx.globalAlpha=Math.max(0,p.life);cx.fillStyle=p.col;cx.fillRect(p.x,p.y,p.r,p.r)}parts=parts.filter(p=>p.life>0);
- for(const f of floaters){f.y-=.8;f.life-=.018;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*.34}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';cx.strokeText(f.txt,f.x,f.y);cx.fillStyle=f.col;cx.fillText(f.txt,f.x,f.y)}floaters=floaters.filter(f=>f.life>0);
+ for(const f of floaters){f.y-=.8;{cx.font=`900 ${cs*.34}px sans-serif`;const hw=cx.measureText(f.txt).width/2+4,cw=W*cs;f.x=Math.max(hw,Math.min(cw-hw,f.x))}f.life-=.018;cx.globalAlpha=Math.max(0,f.life);cx.font=`900 ${cs*.34}px sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#3a2205';cx.strokeText(f.txt,f.x,f.y);cx.fillStyle=f.col;cx.fillText(f.txt,f.x,f.y)}floaters=floaters.filter(f=>f.life>0);
  if(shimmer>0){cx.globalAlpha=shimmer*.18;cx.fillStyle='#ffd34d';cx.fillRect(0,0,cs*W,cs*H);shimmer-=.05}
  cx.globalAlpha=1;cx.restore()}
 requestAnimationFrame(frame);
@@ -475,7 +475,7 @@ function build(){if(window.openTown)openTown()}
 const _showMap=showMap;showMap=function(){if(S.pendingBreak){S.streak=0;S.pendingBreak=false;save()}_showMap();renderTown();
  document.querySelectorAll('#mapInner .node').forEach(n=>{const i=+n.dataset.i;if((i+1)%5===0&&!S.chests[i]){const c=document.createElement('span');c.className='chest';c.textContent='🎁';n.appendChild(c)}})};
 // stars: remember digs left the moment goals are met
-const _gm=goalsMet;goalsMet=function(){const r=_gm();if(r&&st&&st.leftAtWin==null)st.leftAtWin=st.digs;return r};
+const _gm=goalsMet;goalsMet=function(){const r=_gm();if(r&&st&&st.leftAtWin==null)st.leftAtWin=Math.max(0,st.digs-(st.bonusDigs||0));return r};
 // level start: streak bonus + first-time hand
 const _start=startLevel;startLevel=function(i){if(S.pendingBreak){S.streak=0;S.pendingBreak=false;save()}_start(i);
  const d=streakDigs(S.streak);if(d){st.digs+=d;st.max+=d;updHud();setTimeout(()=>{callout('🔥 Streak x'+S.streak+': +'+d+' digs!')},350)}
@@ -496,7 +496,7 @@ const _win=win;win=async function(_s){const frac=(st.leftAtWin==null?st.digs:st.
  // decorate the win card
  const card=$('ovCard');if(!card||!/Claim Cleared/.test(card.innerHTML))return;card.querySelector('h2').textContent=S.streak>=3?'🔥 '+S.streak+' in a row!':['','Level Cleared!','Great Dig!','Perfect Dig!'][stars];
  const n=nextB(),f=starsFree(),nxt=L.id+1,toChest=4-(L.id+1)%5+1;
- const t=document.createElement('div');t.className='teaser';t.innerHTML=`${claimMsg}${chestMsg}🔥 Win streak: <b>${S.streak}</b>${streakDigs(S.streak)?` · next level starts with <b>+${streakDigs(S.streak)} digs</b>`:''}<br>${n?(f>=n[2]?`🏗 You can build the <b>${n[0]} ${n[1]}</b> now!`:`🏗 ${n[0]} ${n[1]}: ⭐${f}/${n[2]}`):'🏗 Boomtown complete!'}${nxt<MAINLV&&!S.chests[nxt+toChest-1]?`<br>🎁 Chest in ${toChest} level${toChest>1?'s':''}`:''}`;
+ const t=document.createElement('div');t.className='teaser';t.innerHTML=`${claimMsg}${chestMsg}🔥 Win streak: <b>${S.streak}</b>${streakDigs(S.streak)?` · next level starts with <b>+${streakDigs(S.streak)} digs</b>`:''}<br>${Object.values(S.stars||{}).filter(v=>v>0).length<2?'🏗 Boomtown opens after the next level!':n?(f>=n[2]?`🏗 You can build the <b>${n[0]} ${n[1]}</b> now!`:`🏗 ${n[0]} ${n[1]}: ⭐${f}/${n[2]}`):'🏗 Boomtown complete!'}${nxt<MAINLV&&!S.chests[nxt+toChest-1]?`<br>🎁 Chest in ${toChest} level${toChest>1?'s':''}`:''}`;
  card.querySelector('.stars').after(t);
  if(n&&f>=n[2]&&Object.values(S.stars).filter(v=>v>0).length>=2){const bb=document.createElement('button');bb.className='btn';bb.textContent='🏗 Build';bb.style.margin='4px';t.after(bb);onTap(bb,()=>{hideOv();showMap();build()})}
  const nb2=$('nextB');if(nb2){nb2.style.fontSize='20px';nb2.style.padding='12px 26px';nb2.textContent='Next Level '+(nxt+1)+' ▶'}};
@@ -516,7 +516,7 @@ function daily(after){const k=todayKey();if(S.daily.last===k){after&&after();ret
  showOv(`<h2>📅 Daily Gold</h2><p>Come back every day for bigger rewards!</p><div class="cal">${DAILY.map((d,i)=>`<div class="${i+1<day?'got':i+1===day?'now':''}">Day ${i+1}<b>${d[0]}</b>${d[1]}</div>`).join('')}</div>${gap>1&&S.daily.last?'<p style="font-size:12px;opacity:.7">New week, fresh start. You keep everything you earned.</p>':''}<button class="btn g" id="dOk">Collect Day ${day}</button>`,
  ()=>onTap($('dOk'),()=>{DAILY[day-1][2](S);S.daily={last:k,day};save();SFX.coin(4);hideOv();toast('Collected: '+DAILY[day-1][0]+' '+DAILY[day-1][1]);topBar();after&&after()}))}
 // first launch: welcome straight into level 1 (no empty map)
-function boot(){if(!S.seenIntro&&S.unlocked===1&&!S.stars[0]){showOv(`<h2>⛏ Gold Fever Frenzy</h2><p style="font-size:18px">Dig up gold, merge nuggets, and build a Gold Rush boomtown!</p><p>🟡 Tap gold to collect it<br>🟫 Tap patches of dirt to dig</p><button class="btn g" id="goB" style="font-size:22px;padding:14px 30px">Start Digging!</button>`,()=>onTap($('goB'),()=>{S.seenIntro=1;S.daily={last:todayKey(),day:1};save();hideOv();startLevel(0)}))}
+function boot(){if(!S.seenIntro&&S.unlocked===1&&!S.stars[0]){$('ov').classList.add('solid');showOv(`<button class="btn s" id="introX" aria-label="Close" style="position:absolute;right:8px;top:8px">✕</button><h2>⛏ Gold Fever Frenzy</h2><p style="font-size:18px">Dig up gold, merge nuggets, and build a Gold Rush boomtown!</p><p>🟡 Tap gold to collect it<br>🟫 Tap patches of dirt to dig</p><button class="btn g" id="goB" style="font-size:22px;padding:14px 30px">Start Digging!</button>`,()=>{onTap($('introX'),()=>{S.seenIntro=1;save();$('ov').classList.remove('solid');hideOv()});onTap($('goB'),()=>{$('ov').classList.remove('solid');S.seenIntro=1;S.daily={last:todayKey(),day:1};save();hideOv();startLevel(0)})})}
  else daily()}
 renderTown();
 // let the original "welcome back" card show first, then the calendar
@@ -608,7 +608,7 @@ function runCoach(it){const{id,steps,done,scr}=it;
  if(Date.now()-it.at>20000)return coPump();
  if(curScr()!==scr){setTimeout(()=>{coQ.push(it);coPump()},700);return coPump()}
  if(scr==='sPlay'&&PLAYLESSON.includes(id)&&window.__lessonShown)return coPump(); // one new idea per level
- if(($('ov').classList.contains('on')||$('jack').classList.contains('on'))&&!steps.some(s=>s.el&&s.el.startsWith('#ovCard'))){setTimeout(()=>{coQ.push(it);coPump()},700);return}
+ if(($('ov').classList.contains('on')||$('jack').classList.contains('on')||(scr==='sPlay'&&(busy||(st&&st.over))))&&!steps.some(s=>s.el&&s.el.startsWith('#ovCard'))){setTimeout(()=>{coQ.push(it);coPump()},700);return}
  if(!steps.every(s=>okEl(s.el,scr)))return coPump();
  coActive=id;if(scr==='sPlay')window.__lessonShown=true;const tok=++coTok;let i=0;
  const show=()=>{if(tok!==coTok)return;const s=steps[i];if(curScr()!==scr||!okEl(s.el,scr)){coCancel();return}
@@ -623,7 +623,7 @@ function upFlash(title){SFX.win();hap('Heavy');if(!calm()){coinShower(70);border
 // ---- Map strip: town + gear + shop buttons ----
 window.TownStrip=tw=>{const f=sFree(),n=TownNext(),built=Object.keys(BLD).filter(k=>lv(k)>0).length;
  tw.style.flexDirection='column';tw.style.alignItems='stretch';
- tw.innerHTML=`<div class="bld" style="font-size:22px;text-align:center">${Object.keys(BLD).map(k=>`<i class="${lv(k)?'b':''}">${BLD[k].ic}</i>`).join(' ')}</div><small style="text-align:center">🏗 Boomtown · ⭐${f} stars to spend${n&&f>=n[2]?' · <b style="color:#9fe09f">you can build!</b>':''}</small>
+ tw.innerHTML=`<div class="bld" style="font-size:22px;text-align:center">${Object.keys(BLD).map(k=>`<i class="${lv(k)?'b':''}">${BLD[k].ic}</i>`).join(' ')}</div><small style="text-align:center">🏗 Boomtown · ⭐${f} stars to spend${n&&f>=n[2]&&Object.values(S.stars||{}).filter(v=>v>0).length>=2?' · <b style="color:#9fe09f">you can build!</b>':''}</small>
  <div class="tw2"><button class="btn ${n&&f>=n[2]?'g':''}" id="twB">🏗 Town</button><button class="btn" id="gearB">⚙ Gear</button><button class="btn" id="shopB">🛒 Shop</button></div>`;
  onTap($('twB'),openTown);onTap($('gearB'),()=>window.openGear(null));onTap($('shopB'),()=>window.openShop());
  if(S._refundMsg){const r=S._refundMsg;delete S._refundMsg;save();setTimeout(()=>toast(`Boomtown got an upgrade! Your ⭐${r} stars were refunded so you can choose new perks.`,5000),800)}
@@ -1274,7 +1274,7 @@ window.startRush=c=>{if(!rushOpen(c)){toast(`Beat level ${c*10+10} to open this 
 const css=document.createElement('style');css.textContent=`.node.rush{width:50px;height:50px;font-size:22px;background:radial-gradient(#ffe27a,#e07a12);border-color:#fff;box-shadow:0 0 14px #ffb000}.node.rush.off{background:#3a2c20;box-shadow:none;filter:grayscale(.6)}.node.rush small{position:absolute;bottom:-16px;font-size:10px;white-space:nowrap;color:#ffd34d;text-shadow:0 1px 0 #000}`;document.head.appendChild(css);
 const _sm=showMap;showMap=function(){clearInterval(tm);restoreLbl();_sm.apply(this,arguments);const inner=$('mapInner'),mw=Math.min(520,window.innerWidth);
  for(let c=0;c<CHAPTERS.length;c++){const b=inner.querySelector(`.node[data-i="${c*10+9}"]`);if(!b)continue;const top=parseFloat(b.style.top),left=parseFloat(b.style.left);const x=left>mw/2-29?mw*.1:mw*.9-50;
-  const open=rushOpen(c),ready=open&&!playedToday(c);const n=document.createElement('div');n.className='node rush'+(ready?' cur':' off');n.style.top=(top-30)+'px';n.style.left=x+'px';n.innerHTML=(open?'⏱':'🔒')+`<small>${ready?'Gold Rush!':open?'Tomorrow':'Gold Rush'}</small>`;inner.appendChild(n);onTap(n,()=>{SFX.click();window.startRush(c)})}};
+  const open=rushOpen(c),ready=open&&!playedToday(c);const n=document.createElement('div');n.className='node rush'+(ready?' cur':' off');n.style.top=(top-30)+'px';n.style.left=x+'px';n.innerHTML=(open?'⏱':'🔒')+`<small>${ready?'Gold Rush!':open?'Tomorrow':'Gold Rush'}</small>`;inner.appendChild(n);if(!open&&!ready)n.style.display='none';onTap(n,()=>{SFX.click();window.startRush(c)})}};
 GE.chip({id:'rush',order:15,show:()=>{for(let c=0;c<CHAPTERS.length;c++)if(rushOpen(c)&&!playedToday(c))return true;return false},hot:()=>true,html:()=>'⏱ Gold Rush',tap:()=>{for(let c=CHAPTERS.length-1;c>=0;c--)if(rushOpen(c)&&!playedToday(c)){window.startRush(c);return}}});
 // retry/next buttons never point at a bonus level; quitting a Gold Rush keeps the day used
 })();
@@ -1421,11 +1421,11 @@ document.addEventListener('visibilitychange',()=>document.hidden?pause():resume(
 (function(){
 const css=document.createElement('style');css.textContent=`
 .bst{margin-bottom:14px}.bst .bl{position:absolute;left:-6px;right:-6px;bottom:-15px;text-align:center;font:800 10px/1 sans-serif;color:#ffd34d;white-space:nowrap;pointer-events:none}
-.demo{display:flex;gap:4px;justify-content:center;margin:10px 0}.demo i{width:30px;height:30px;border-radius:7px;display:inline-block}
-.demo .d{background:linear-gradient(#8a5a2b,#6e4520)}.demo .c{background:linear-gradient(#b5653a,#8c4a28)}.demo .n{background:radial-gradient(circle at 40% 40%,#fff6b0,#ffd34d 40%,#b87a08 75%,#3a2a18 76%)}
-.demo.go .d{animation:dgo 2.4s infinite}.demo.mg .n{animation:mgo 2.4s infinite}
+.demo{display:flex;gap:4px;justify-content:center;margin:10px 0}.demo i{width:30px!important;height:30px!important;flex:0 0 30px;border-radius:7px;display:inline-block!important;position:static!important}
+.demo .d{background:linear-gradient(#8a5a2b,#6e4520)}.demo .c{background:linear-gradient(#b5653a,#8c4a28)}.demo .n{border-radius:50%!important;background:radial-gradient(circle at 35% 35%,#fff6b0,#ffd34d 45%,#b87a08 100%);box-shadow:0 0 0 2px #7a4a08}
+.demo.dgo .d{animation:dgo 2.4s infinite}.demo.dmg .n{animation:mgo 2.4s infinite}
 @keyframes dgo{0%,35%{opacity:1;transform:scale(1)}50%,80%{opacity:0;transform:scale(.3)}100%{opacity:1}}
-@keyframes mgo{0%,35%{transform:scale(1)}55%{transform:scale(.2) translateX(30px)}70%,85%{transform:scale(1.6)}100%{transform:scale(1)}}
+@keyframes mgo{0%,35%{transform:scale(1)}55%{transform:scale(.85)}70%,85%{transform:scale(1.25);box-shadow:0 0 12px 4px #ffd34d}100%{transform:scale(1)}}
 .unew{position:relative}.unew:after{content:'NEW!';position:absolute;top:-8px;right:-6px;background:#e33;color:#fff;font:900 10px sans-serif;padding:2px 5px;border-radius:8px;animation:unp 1s infinite alternate}
 @keyframes unp{from{transform:scale(1)}to{transform:scale(1.15)}}
 .sbk{margin:6px auto;max-width:260px;font-size:15px;text-align:left;background:#0004;border-radius:10px;padding:6px 10px}.sbk div{display:flex;justify-content:space-between}.sbk .tot{border-top:1px solid #ffd34d66;margin-top:4px;padding-top:4px;font-weight:900;color:#ffd34d}`;document.head.appendChild(css);
@@ -1436,8 +1436,8 @@ const _dt=drawTile;drawTile=function(c,x,y,t){_dt.apply(this,arguments);const px
  else if(c.t==='C'){cx.save();cx.strokeStyle='#5a2a1288';cx.lineWidth=2;cx.beginPath();cx.moveTo(px+cs*.2,py+cs*.55);cx.lineTo(px+cs*.8,py+cs*.55);cx.moveTo(px+cs*.3,py+cs*.75);cx.lineTo(px+cs*.7,py+cs*.75);cx.stroke();cx.restore()}
  else if(c.t==='B'){cx.save();cx.strokeStyle='#1a1a1a';cx.lineWidth=Math.max(2,cs*.06);cx.beginPath();cx.ellipse(px+cs/2,py+cs/2,cs*.42,cs*.38,0,0,7);cx.stroke();cx.restore()}};
 // 1) strategy demo cards before play on L1 (big patch) and L2 (gold combo)
-const DEMO={0:['demoPatch','<h2>Big patch = big dig!</h2><div class="demo go"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></div><p style="font-size:17px">One tap digs <b>every touching block of the same dirt</b>. Pick the <b>biggest patch</b> to clear more with one dig, and 6+ makes a ⛏ special tile!</p>'],
- 1:['demoCombo','<h2>Gold combo!</h2><div class="demo mg"><i class="n"></i><i class="c"></i><i class="n"></i><i class="n"></i></div><p style="font-size:17px"><b>3 matching nuggets touching</b> join into one <b>bigger nugget</b> worth much more. Dig the dirt <b>between</b> nuggets to bring them together first!</p>']};
+const DEMO={0:['demoPatch','<h2>Big patch = big dig!</h2><div class="demo dgo"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></div><p style="font-size:17px">One tap digs <b>every touching block of the same dirt</b>. Pick the <b>biggest patch</b> to clear more with one dig, and 6+ makes a ⛏ special tile!</p><p style="font-size:16px">🟡 <b>Tapping a nugget uses a dig too.</b> Grab it now, or dig around it first so nuggets join into a bigger one.</p>'],
+ 1:['demoCombo','<h2>Gold combo!</h2><div class="demo dmg"><i class="n"></i><i class="c"></i><i class="n"></i><i class="n"></i></div><p style="font-size:17px"><b>3 matching nuggets touching</b> join into one <b>bigger nugget</b> worth much more. Dig the dirt <b>between</b> nuggets to bring them together first!</p>']};
 const _sl=startLevel;startLevel=function(i){const r=_sl.apply(this,arguments);const d=DEMO[i];if(!d||S.coach[d[0]]||window.SIM)return r;let n=0;
  const w=()=>{if(S.coach[d[0]])return;const on=$('ov').classList.contains('on')||$('coach').classList.contains('on');if(!L||L.id!==i||!$('sPlay').classList.contains('on')||on){if(++n<400)setTimeout(w,150);return}
   $('toast').style.display='none';showOv(`<div id="demoCard">${d[1]}<button class="btn g" id="demoOk" style="font-size:22px;padding:14px 36px">Got it!</button></div>`,()=>onTap($('demoOk'),()=>{S.coach[d[0]]=1;save();hideOv()}))};setTimeout(w,200);return r};
@@ -1470,7 +1470,7 @@ const css=document.createElement('style');css.textContent=`
 #goalLine{margin:4px auto 0;max-width:520px;text-align:center;font:800 14px/1.3 sans-serif;color:#ffe9a8;background:#0005;border-radius:10px;padding:5px 10px}
 .goalW{font-size:17px;font-weight:900;color:#ffe9a8;margin:6px 0}
 #town .bld i{position:relative;display:inline-block}#town .bld i.b{text-shadow:0 0 8px #ffd34d}#town .bld i sup{position:absolute;right:-5px;top:-4px;font:900 9px sans-serif;color:#fff;background:#3a7a3a;border-radius:6px;padding:0 3px}
-#town .bld i.nx{filter:grayscale(.2) brightness(.85)!important;animation:nxp 1.4s infinite alternate}#town .bld i.nx:after{content:'🚧';position:absolute;right:-6px;bottom:-5px;font-size:11px}
+#town .bld i.nx{filter:grayscale(.2) brightness(.85)!important;animation:nxp 1.4s infinite alternate}
 @keyframes nxp{from{transform:scale(1)}to{transform:scale(1.12)}}
 .endBtns #nextB{order:-1;flex:1 1 100%;font-size:24px!important;padding:16px 20px!important}.endBtns{flex-wrap:wrap}
 .helpL{text-align:left;font-size:15px;margin:4px 0}#sMap .gtitle{position:relative}#sMap .gtitle .helpB{position:absolute;right:2px;top:-6px;font-size:12px;padding:2px 6px;min-width:0}`;document.head.appendChild(css);
@@ -1482,7 +1482,7 @@ const onPlay=()=>$('sPlay').classList.contains('on');
 // ---- 1) nugget oz value on every nugget + highlight for previews ----
 let PV=null;window.__pv=()=>PV;
 const _dt=drawTile;drawTile=function(c,x,y,t){_dt.apply(this,arguments);const px=x*cs,py=(y+c.y)*cs;
- if(c.t==='N'){const v=ozTxt(nugV(c));cx.save();cx.font=`900 ${Math.max(10,cs*.26)}px sans-serif`;cx.textAlign='center';cx.textBaseline='alphabetic';cx.lineWidth=3;cx.strokeStyle='#2a1800';cx.fillStyle='#fff';const ty=py+cs*.93;cx.strokeText(v,px+cs/2,ty);cx.fillText(v,px+cs/2,ty);cx.restore()}
+ if(c.t==='N'){const v=ozTxt(nugV(c));cx.save();cx.font=`900 ${Math.max(12,cs*.34)}px sans-serif`;cx.textAlign='center';cx.textBaseline='alphabetic';cx.lineWidth=3;cx.strokeStyle='#2a1800';cx.fillStyle='#fff';const ty=py+cs*.93;cx.strokeText(v,px+cs/2,ty);cx.fillText(v,px+cs/2,ty);cx.restore()}
  if(PV&&PV.set.has(x+','+y)){cx.save();cx.strokeStyle=PV.col||'#fff';cx.lineWidth=Math.max(2,cs*.08);rr(px+cs*.06,py+cs*.06,cs*.88,cs*.88,cs*.18);cx.stroke();cx.fillStyle='#ffffff26';cx.fill();cx.restore()}};
 // ---- 8) press-to-preview the dirt group / booster area ----
 const play=$('play');const lbl=document.createElement('div');lbl.id='pvLbl';play.appendChild(lbl);
@@ -1526,7 +1526,7 @@ const _sl=startLevel;startLevel=function(i,force){const s=getSnap();
 setTimeout(function chk(n){const s=getSnap();if(!s)return;if($('ov').classList.contains('on')||!$('sMap').classList.contains('on')){if((n||0)<40)setTimeout(()=>chk((n||0)+1),500);return}askResume(s,()=>startLevel(s.id,true))},800);
 // ---- 3) tutorials: cancel when the screen changes; Help button with replay ----
 const _show=show;show=function(id){const was=document.querySelector('.scr.on');const r=_show.apply(this,arguments);if(was&&was.id!==id&&window.__coCancel)__coCancel();if(window.__gate)setTimeout(__gate,0);return r};
-const LESSONS=[['⛏ Dig','Tap a patch of dirt. Every touching block of the same dirt is dug with one dig.'],['🟡 Gold','Tap gold to collect it. The number on each nugget is how many oz it is worth.'],['✨ Merge','3 or more matching nuggets touching join into one bigger nugget worth <b>25% more</b> than the pieces.'],['⛏ Specials','Dig a patch of 6 for a Pick Strike, 8 for Dynamite, 10 for Gold Rush. Press and hold to preview a patch first.'],['🪨 Rocks','Rocks take 2 hits. Digging right next to them also cracks them.'],['💧 Water','Collect water by tapping it.'],['🧨 Boosters','Tap a booster, then press the board to see where it will act. Lift to use it, or tap ✕ Cancel.'],['⭐ Stars','Finish with more digs left for more stars. Extra digs from +5 Digs count toward your total.'],['🏗 Town','Stars build Boomtown. Each building powers you up in every level.']];
+const LESSONS=[['⛏ Dig','Tap a patch of dirt. Every touching block of the same dirt is dug with one dig.'],['🟡 Gold','Tapping gold uses a dig. Collect now, or wait and merge it into a bigger nugget first. The number on each nugget is how many oz it is worth.'],['✨ Merge','3 or more matching nuggets touching join into one bigger nugget worth <b>25% more</b> than the pieces.'],['⛏ Specials','Dig a patch of 6 for a Pick Strike, 8 for Dynamite, 10 for Gold Rush. Press and hold to preview a patch first.'],['🪨 Rocks','Rocks take 2 hits. Digging right next to them also cracks them.'],['💧 Water','Collect water by tapping it.'],['🧨 Boosters','Tap a booster, then press the board to see where it will act. Lift to use it, or tap ✕ Cancel.'],['⭐ Stars','Finish with spare digs for more stars: 30% of your digs left = ⭐⭐⭐, 12% = ⭐⭐. Digs added by +5 Digs or ads do not count toward stars or the spare-dig bonus.'],['🏗 Town','Stars build Boomtown. Each building powers you up in every level.']];
 function openHelp(){showOv(`<h2>❓ How to play</h2>${LESSONS.map(([a,b])=>`<p class="helpL"><b>${a}:</b> ${b}</p>`).join('')}<div style="display:flex;gap:8px;justify-content:center;margin-top:10px"><button class="btn" id="hReplay">↻ Replay tips</button><button class="btn g" id="hOk">Got it</button></div>`,()=>{onTap($('hOk'),hideOv);onTap($('hReplay'),()=>{S.coach={};save();hideOv();toast('Tips will show again as you play.',2200)})})}
 window.openHelp=openHelp;
 for(const sel of['#sMap .gtitle','#sPlay .top']){const t=document.querySelector(sel);if(!t)continue;const b=document.createElement('button');b.className='btn s helpB';b.title='How to play';b.textContent='❓';t.appendChild(b);onTap(b,openHelp)}
@@ -1537,7 +1537,7 @@ for(const k in NEED){const f=window[k];if(typeof f!=='function')continue;window[
 if(window.__gate){__gate();const mo=new MutationObserver(()=>{if(mo.q)return;mo.q=requestAnimationFrame(()=>{mo.q=0;__gate()})});mo.observe($('sMap'),{childList:true,subtree:true})}
 // ---- 8) one clear next goal + visible town growth ----
 const ICK={'⚒':'smith','⚖':'assay','🥤':'saloon','🏦':'bank','🏪':'store','🚂':'depot'};
-function nextGoal(){const n=cleared();if(n<2)return `🎯 Next goal: clear Level ${n+1}${n<1?'':''} to ${n===1?'open 🏗 Boomtown':'start your claim'}`;
+function nextGoal(){const n=cleared();if(n<2)return `🎯 Next goal: clear Level ${n+1}${n<1?'':''} to ${n===1?'open 🏗 Boomtown':'start your claim'}`.replace(/clear Level \d+ to open 🏗 Boomtown/,'Boomtown opens after the next level!');
  const tot=Object.values(S.stars||{}).reduce((a,b)=>a+b,0),free=tot-(S.starSpent||0),nb=window.TownNext?TownNext():null;
  if(!nb)return '🎯 Next goal: get ⭐⭐⭐ on every level';
  if(free>=nb[2])return `🎯 Next goal: build the ${nb[0]} ${nb[1]} in 🏗 Town!`;
@@ -1551,6 +1551,86 @@ if($('town')&&!$('goalLine')){const g=document.createElement('div');g.id='goalLi
 // win card: prominent Next Level + one goal line; Build only after Town unlock
 const _w=win;win=async function(){const r=await _w.apply(this,arguments);try{$('toast').style.display='none';const card=$('ovCard');if(card&&!$('goalW')){const s=card.querySelector('#scoreBk')||card.querySelector('.stars');if(s)s.insertAdjacentHTML('afterend',`<div class="goalW" id="goalW">${nextGoal()}</div>`)}
  const nb=$('nextB');if(nb){nb.closest('.endBtns')&&nb.closest('.endBtns').prepend(nb)}}catch(e){}clearSnap();snap.last=null;return r};
+})();
+</script>
+<script>
+// ===== AI-playtest fixes (Oct 29 2026): one dialog at a time, settings gear, Upgrades, honest out-of-digs, guided merge, calmer effects, tile feedback =====
+(function(){
+const css=document.createElement('style');css.textContent=`
+.card{position:relative}.ov.solid{background:#140c06f2}
+#toast{top:calc(64px + env(safe-area-inset-top))!important;bottom:auto!important;font-size:16px!important;font-weight:800;background:#1b120af5!important;border:2px solid #ffd34d!important;color:#fff;z-index:19!important;width:max-content;max-width:90%;text-align:center;left:50%;transform:translateX(-50%);box-shadow:0 4px 16px #000a}
+#map{scrollbar-color:#6b4220 #1b120a;scrollbar-width:thin}#map::-webkit-scrollbar{width:8px}#map::-webkit-scrollbar-track{background:#1b120a}#map::-webkit-scrollbar-thumb{background:#6b4220;border-radius:6px}
+#town .bld{font-size:26px!important}
+#goalLine,.goalW{background:#000c!important;color:#ffd34d!important;border:2px solid #ffd34d;border-radius:10px;padding:6px 10px}
+.helpL{font-size:17px!important;line-height:1.45;margin:10px 0!important}
+.setRow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0;font-size:17px;text-align:left}.setRow .btn{min-width:84px}
+.setRow .btn.off{background:#5a4a3a;color:#ddd}
+#opsB{position:relative}#opsB .bdg{position:absolute;top:-6px;right:-4px;background:#e33;color:#fff;border-radius:10px;font:900 11px sans-serif;padding:2px 6px}
+#gRing{position:absolute;pointer-events:none;border:4px solid #fff;border-radius:10px;box-shadow:0 0 14px #ffd34d;animation:gr 0.8s infinite alternate;z-index:5;display:none}
+@keyframes gr{from{transform:scale(.92)}to{transform:scale(1.08)}}
+#sMap .gtitle .helpB{display:none}
+.opsTabs{position:sticky;bottom:0}
+#sMap .gtitle{padding-top:0!important}`;document.head.appendChild(css);
+const ovOn=()=>$('ov').classList.contains('on');
+// ---- 1) one dialog at a time: any popup cancels (and re-offers later) a tutorial not aimed at that popup; never show over the jackpot ----
+const coDom=$('coach');
+const _so=showOv;showOv=function(html,after){if(coDom&&coDom.classList.contains('on')&&window.__coCancel)__coCancel();$('toast').style.display='none';return _so.apply(this,arguments)};
+setInterval(()=>{if(coDom&&coDom.classList.contains('on')&&$('jack').classList.contains('on')&&window.__coCancel)__coCancel()},200);
+// ---- 6) clear effects on screen change; ordinary showers short ----
+const _show=show;show=function(id){const was=document.querySelector('.scr.on');const r=_show.apply(this,arguments);if(was&&was.id!==id){try{coins=[];twk=[];floaters=[];parts=[];borderFlash=0;$('jack').classList.remove('on');$('toast').style.display='none';gEnd()}catch(e){}}return r};
+const _cs=coinShower;coinShower=function(n,x,y){if(!window.__bigFx)n=Math.min(n,x!=null?10:18);return _cs.call(this,n,x,y)};
+const _jp=jackpot;jackpot=function(){window.__bigFx=1;const p=_jp.apply(this,arguments);setTimeout(()=>window.__bigFx=0,600);return p};
+const _cb=window.combo2;
+// ---- 8) settings gear replaces music/voice/sound/flash buttons ----
+['calmB','musB','vocB','muteB','musB2','vocB2','muteB2'].forEach(id=>{const e=$(id);if(e)e.style.display='none'});
+function openSettings(){const row=(k,label,on)=>`<div class="setRow"><span>${label}</span><button class="btn ${on?'g':'off'}" data-set="${k}" aria-pressed="${on}">${on?'On':'Off'}</button></div>`;
+ showOv(`<button class="btn s" id="setX" aria-label="Close" style="position:absolute;right:8px;top:8px">✕</button><h2>⚙ Settings</h2>${row('mus','🎵 Music',S.music!==false)}${row('voc','🗣️ Prospector voice',S.voice!==false)}${row('sfx','🔊 Sound effects',!muted)}${row('calm','🌙 Reduce flashing',!!S.calm)}<button class="btn" id="setHelp" style="margin-top:8px">❓ How to play</button>`,()=>{
+  onTap($('setX'),hideOv);onTap($('setHelp'),()=>{hideOv();window.openHelp&&openHelp()});
+  document.querySelectorAll('[data-set]').forEach(b=>onTap(b,()=>{const k=b.dataset.set;if(k==='mus')Music.setOn(S.music===false);else if(k==='voc')setVoice(S.voice===false);else if(k==='sfx')setMute(!muted);else setCalm(!calm());openSettings()}))})}
+window.openSettings=openSettings;
+for(const sel of['#sMap .top','#sPlay .top']){const t=document.querySelector(sel);const b=document.createElement('button');b.className='btn s setB';b.title='Settings: music, voice, sound, flashing';b.setAttribute('aria-label','Settings');b.textContent='⚙';t.appendChild(b);onTap(b,openSettings)}
+{const h=document.querySelector('#sPlay .top .helpB');if(h)h.remove()}
+// ---- 9) Operation → Upgrades, with badge when something is affordable ----
+const ob=$('opsB');ob.innerHTML='🛠 Upgrades';ob.title='Sell gold, hire crew, buy equipment';
+function affordable(){try{if(S.cash>=crewCost())return true;for(const k in UPG)if(S.up[k]<UPG[k].max&&S.cash>=upCost(k))return true}catch(e){}return false}
+function badge(){let d=ob.querySelector('.bdg');const a=affordable();if(a&&!d){d=document.createElement('span');d.className='bdg';d.textContent='!';ob.appendChild(d)}else if(!a&&d)d.remove()}
+setInterval(badge,1000);badge();
+document.querySelectorAll('#sOps h3,#sOps h2').forEach(()=>{});
+// Upgrades screen: bottom tab bar (Map / Play / Journal) and no iPhone-only wording in the web build
+const native=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+const _ops=showOps;showOps=function(){const r=_ops.apply(this,arguments);try{
+ if(!native){const nr=$('notifRow');if(nr){const h=nr.previousElementSibling;if(h&&h.tagName==='H3')h.remove();nr.remove()}}
+ if(!document.querySelector('#sOps .tabs')){const t=document.createElement('div');t.className='tabs opsTabs';t.innerHTML='<button class="btn" id="otMap">🗺 Map</button><button class="btn g" id="otPlay">▶ Play</button><button class="btn" id="otJ">📖 Journal</button>';$('sOps').appendChild(t);
+  onTap($('otMap'),showMap);onTap($('otPlay'),()=>{const i=Math.min(S.unlocked-1,S.claims*10-1);startLevel(i)});onTap($('otJ'),()=>{showMap();window.openJournal&&openJournal()})}}catch(e){}return r};
+// ---- weekend chip: clear icon instead of a 'U'-looking horseshoe ----
+if(window.GE&&GE.chips){const c=GE.chips.find(c=>c.id==='hunt');if(c){const h=c.html;c.html=()=>h().replace(/<svg[\s\S]*?<\/svg>/,'🎉');GE.renderChips()}}
+// ---- 10) out of digs: no paid packs in this round ----
+const _lo=lose;lose=function(){_lo();try{const d=$('iapDigs');if(d)d.remove();const p=$('plusB');if(p&&/ad/.test(p.textContent)){const n=p.cloneNode(true);p.replaceWith(n);onTap(n,()=>{n.disabled=true;n.textContent='📺 (Ad placeholder…)';setTimeout(()=>{st.usedFree=true;st.digs+=5;st.max+=5;st.bonusDigs=(st.bonusDigs||0)+5;st.over=false;hideOv();renderBoost();updHud()},1500)})}}catch(e){}};
+// ---- 7) early win screens: result, reward, Next. Extra systems appear from level 3 on ----
+const _w=win;win=async function(){const id=L&&L.id;const r=await _w.apply(this,arguments);try{const c=$('ovCard');if(!c)return r;
+ c.querySelectorAll('p').forEach(p=>{if(/Worth about/.test(p.textContent)&&id<2)p.remove()});
+ const t=c.querySelector('.teaser');if(t&&id<2){t.innerHTML=t.innerHTML.split('<br>').filter(x=>!/streak|Chest in|Boomtown opens/i.test(x)).join('<br>')}
+ const nCl=Object.values(S.stars||{}).filter(v=>v>0).length;if(nCl<10)c.querySelectorAll('#ovCard *').forEach(e=>{if(e.children.length<=2&&/Gold Vault/.test(e.textContent)&&!e.querySelector('button'))e.remove()});
+ const bk=$('scoreBk');if(bk){const rows=bk.querySelectorAll('div');rows.forEach(d=>{const s=d.querySelector('span');if(s&&/spare dig/.test(s.textContent)){const left=st.leftAtWin||0;s.textContent=`⛽ Spare-dig bonus (${left} left)`}})}
+ if(!$('starRule')){const s=c.querySelector('.stars');const left=st.leftAtWin||0,mx=st.max||1;if(s)s.insertAdjacentHTML('afterend',`<p id="starRule" style="font-size:13px;opacity:.85;margin:2px 0">You finished with ${left} of ${mx} digs to spare. ⭐⭐⭐ = 30% left, ⭐⭐ = 12% left.</p>`)}
+ }catch(e){}return r};
+// ---- 11) tile feedback ----
+const _tc=tapCell;tapCell=async function(x,y){const c=B[x]&&B[x][y];const before=!busy&&st&&!st.over&&c&&!armed?c.t:null;
+ if(G&&before){if(x!==G[0]||y!==G[1]){toast('Tap the glowing block under the nugget 👇',1800);return}}
+ if(before){try{if(before==='B'){tone(70,.18,'sine',.25,-20);hap('Medium')}else if(before==='N'){ding(0);burst(x,y,'#fff',10,4);hap('Light')}else{noise(.08,.12);tone(220,.05,'triangle',.05,-120);hap('Light')}}catch(e){}}
+ const r=await _tc.apply(this,arguments);if(G&&before){gEnd();S.coach.mergeGuide=1;save();setTimeout(()=>{callout('MERGE!');toast('✨ 3 nuggets joined into 1 bigger nugget, worth <b>25% more</b> than the pieces!',3800)},500)}return r};
+// ---- 4) guided merge on level 2 ----
+let G=null;const ring=document.createElement('div');ring.id='gRing';$('play').appendChild(ring);
+function gEnd(){G=null;ring.style.display='none'}window.__gGet=()=>G;
+function gPlace(){if(!G)return;const r=$('cv').getBoundingClientRect(),pr=$('play').getBoundingClientRect();Object.assign(ring.style,{display:'block',left:(r.left-pr.left+G[0]*cs)+'px',top:(r.top-pr.top+G[1]*cs)+'px',width:cs+'px',height:cs+'px'})}
+addEventListener('resize',()=>setTimeout(gPlace,100));
+function gStart(){if(S.coach.mergeGuide||!L||L.id!==1||!st||st.over||window.SIM)return;const y=H-1,x=3;
+ const D=t=>newTile({t});for(const[a,b]of[[1,y],[5,y],[2,y-1],[4,y-1],[3,y-2]])B[a][b]=D(['D','G','C','K'][(a+b)%4]);
+ B[2][y]=newTile({t:'N',s:1});B[4][y]=newTile({t:'N',s:1});B[3][y-1]=newTile({t:'N',s:1});B[x][y]=D('P');
+ G=[x,y];gPlace();toast('🟡 Try a merge: dig the glowing block. The nugget above drops between the other two and they join!',5000)}
+const _sl=startLevel;startLevel=function(i){const r=_sl.apply(this,arguments);gEnd();if(i===1&&!S.coach.mergeGuide){let n=0;const w=()=>{if(!L||L.id!==1||!$('sPlay').classList.contains('on'))return;if(ovOn()||busy||$('coach').classList.contains('on')){if(++n<300)setTimeout(w,200);return}gStart()};setTimeout(w,600)}return r};
+// ---- help on map lives in the top bar now ----
+{const t=document.querySelector('#sMap .top');const b=document.createElement('button');b.className='btn s';b.textContent='❓';b.title='How to play';b.setAttribute('aria-label','How to play');t.appendChild(b);onTap(b,()=>window.openHelp&&openHelp())}
 })();
 </script>
 </body></html>
