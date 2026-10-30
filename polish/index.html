@@ -479,7 +479,7 @@ const _gm=goalsMet;goalsMet=function(){const r=_gm();if(r&&st&&st.leftAtWin==nul
 // level start: streak bonus + first-time hand
 const _start=startLevel;startLevel=function(i){if(S.pendingBreak){S.streak=0;S.pendingBreak=false;save()}_start(i);
  const d=streakDigs(S.streak);if(d){st.digs+=d;st.max+=d;updHud();setTimeout(()=>{callout('🔥 Streak x'+S.streak+': +'+d+' digs!')},350)}
- let sk=document.querySelector('#play .strk');if(!sk){sk=document.createElement('div');sk.className='strk';$('play').appendChild(sk)}sk.style.display=S.streak?'block':'none';sk.textContent='🔥 Win streak '+S.streak;
+ let sk=document.querySelector('.strk');if(!sk){sk=document.createElement('div');sk.className='strk';$('play').appendChild(sk)}sk.style.display=S.streak?'block':'none';sk.textContent='🔥 Win streak '+S.streak;
  if(i===0&&!S.stars[0])showHand()};
 function showHand(){let h=$('hand');if(!h){h=document.createElement('div');h.id='hand';h.textContent='👆';$('play').appendChild(h);$('cv').addEventListener('pointerdown',()=>{h.style.display='none'},{capture:true})}
  // point at a gold nugget if there is one, else the biggest dirt patch
@@ -1632,5 +1632,15 @@ const _sl=startLevel;startLevel=function(i){const r=_sl.apply(this,arguments);gE
 // ---- help on map lives in the top bar now ----
 {const t=document.querySelector('#sMap .top');const b=document.createElement('button');b.className='btn s';b.textContent='❓';b.title='How to play';b.setAttribute('aria-label','How to play');t.appendChild(b);onTap(b,()=>window.openHelp&&openHelp())}
 })();
+</script>
+<style>/* Layout fixes (Oct 30 2026): streak pill lives in the HUD row, never over the board; HUD never clips */
+#hud{flex-wrap:nowrap;max-width:100%;box-sizing:border-box;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+#hud .box{flex:0 1 auto;min-width:0;box-sizing:border-box}
+#hud .lbl{white-space:nowrap}
+#hud .strk{position:static!important;transform:none!important;top:auto;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center}
+@media (max-width:360px){#hud .box{padding:4px 6px}#hud .lbl{font-size:10px}#hud .strk{font-size:11px;padding:1px 5px}}
+</style>
+<script>/* move streak pill out of the board area into the HUD row */
+(function(){const _s=startLevel;startLevel=function(){const r=_s.apply(this,arguments);document.querySelectorAll('#play .strk').forEach(sk=>{const hud=document.getElementById('hud'),boxes=hud.querySelectorAll('.box');if(boxes[1])hud.insertBefore(sk,boxes[1]);else hud.appendChild(sk)});const sk=document.querySelector('#hud .strk');if(sk&&sk.style.display==='block')sk.style.display='inline-block';return r}})();
 </script>
 </body></html>
